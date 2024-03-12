@@ -1,0 +1,40 @@
+{
+  "name": "pidginmq",
+  "version": "1.0.0",
+  "description": "Fast and reliable background jobs in Typescript",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "source": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ivanvs/pidginmq.git"
+  },
+  "keywords": [
+    "pidginmq",
+    "queues",
+    "jobs"
+  ],
+  "author": "Ivan Vasiljevic",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ivanvs/pidginmq/issues"
+  },
+  "homepage": "https://github.com/ivanvs/pidginmq#readme",
+  "devDependencies": {
+    "@types/node": "^20.11.26",
+    "@typescript-eslint/eslint-plugin": "^7.2.0",
+    "@typescript-eslint/parser": "^7.2.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2"
+  }
+}
