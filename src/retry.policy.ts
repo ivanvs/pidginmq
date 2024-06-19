@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon';
 import { Job } from './types/job.js';
 
-const DEFAULT_DELAY = 1; // 1s
+const DEFAULT_DELAY = 1_000; // 1s
 
 export type ClientRetryPolicy = (job: Job) => Date;
 
@@ -16,7 +16,7 @@ export class RetryPolicies {
         delay = DEFAULT_DELAY;
       }
 
-      return DateTime.utc().plus({ seconds: delay }).toJSDate();
+      return DateTime.utc().plus({ milliseconds: delay }).toJSDate();
     },
     exponential: (delay: number) => {
       return function (job: Job): Date {
@@ -26,7 +26,7 @@ export class RetryPolicies {
 
         return DateTime.utc()
           .plus({
-            seconds: Math.round(Math.pow(2, job.attempt) * delay),
+            milliseconds: Math.round(Math.pow(2, job.attempt) * delay),
           })
           .toJSDate();
       };

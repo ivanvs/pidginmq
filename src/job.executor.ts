@@ -223,14 +223,18 @@ export class JobExecutor {
     if (nextRetryDiff < this.options.scheduleInterval) {
       await this.completer.jobSetStateIfRunning(this.stats, {
         id: this.job.id,
+        errorDoUpdate: true,
         error: attemptError,
+        scheduledAtDoUpdate: true,
         scheduledAt: nextRetry,
         state: 'available',
       });
     } else {
       await this.completer.jobSetStateIfRunning(this.stats, {
         id: this.job.id,
+        errorDoUpdate: true,
         error: attemptError,
+        scheduledAtDoUpdate: true,
         scheduledAt: nextRetry,
         state: 'retryable',
       });

@@ -5,6 +5,7 @@ import {
   QueueConfig,
 } from './client';
 import { SnoozeJobException } from './exceptions/snooze.job.exception';
+import { RetryPolicies } from './retry.policy';
 import { sleep } from './util/promise';
 import { getTestContainer } from './util/test.container';
 import { Workers } from './worker';
@@ -178,5 +179,46 @@ describe('client integration tests', () => {
     expect(cancelledJob.finalizedAt).not.toBeNull();
     expect(cancelledJob.attempt).toBe(0);
     expect(cancelledJob.attemptedAt).toBeNull();
+  });
+
+  it('should be able to retry 3 times job that is failing', async () => {
+    options.workers.addWorker('test', async () => {
+      throw 'error';
+    });
+    options.retryPolicy = RetryPolicies.builtinPolicies.fixed(500);
+
+    pidgin = new Client(options);
+    await pidgin.start();
+
+    const scheduledTime = new Date();
+
+    const createdJob = await pidgin.addJob({
+      kind: 'test',
+      queue: 'test-queue',
+      args: {},
+      maxAttempts: 3,
+      metadata: {},
+      priority: 1,
+      scheduletAt: scheduledTime,
+      tags: ['test'],
+    });
+
+    const fetchedJob = await pidgin.getJob(createdJob.id);
+
+    expect(fetchedJob).not.toBeNull();
+    expect(fetchedJob.state).toBe('available');
+    expect(fetchedJob.attempt).toBe(0);
+    expect(fetchedJob.attemptedAt).toBeNull();
+
+    await sleep(20_000);
+
+    const executedJob = await pidgin.getJob(createdJob.id);
+
+    expect(executedJob).not.toBeNull();
+    expect(executedJob.attempt).toBe(3);
+    expect(executedJob.state).toBe('cancelled');
+    expect(executedJob.finalizedAt).toBeNull();
+    expect(executedJob.attemptedAt).not.toBeNull();
+    expect(executedJob.errors).not.toBeNull();
   });
 });

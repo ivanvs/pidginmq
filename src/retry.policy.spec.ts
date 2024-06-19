@@ -4,7 +4,7 @@ import { Job } from './types/job.js';
 import { createFeakJob } from './util/test.helper.js';
 
 describe('retry policy', () => {
-  const SECOND = 1;
+  const SECOND = 1000;
   let policy: ClientRetryPolicy;
   it('should return date with fixed delay', () => {
     policy = RetryPolicies.builtinPolicies.fixed(SECOND);
