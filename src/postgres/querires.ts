@@ -52,7 +52,7 @@ updated_job AS (
         finalized_at = CASE WHEN state = 'running'::pidginmq_job_state THEN finalized_at ELSE now() END,
         -- Mark the job as cancelled by query so that the rescuer knows not to
         -- rescue it, even if it gets stuck in the running state:
-        metadata = jsonb_set(metadata, '{cancel_attempted_at}'::text[], $3::jsonb, true)
+        metadata = jsonb_set(metadata, '{cancel_attempted_at}'::text[], to_jsonb($3::timestamptz), true)
     FROM notification
     WHERE pidginmq_job.id = notification.id
     RETURNING pidginmq_job.id, pidginmq_job.args, pidginmq_job.attempt, pidginmq_job.attempted_at, pidginmq_job.attempted_by, pidginmq_job.created_at, pidginmq_job.errors, pidginmq_job.finalized_at, pidginmq_job.kind, pidginmq_job.max_attempts, pidginmq_job.metadata, pidginmq_job.priority, pidginmq_job.queue, pidginmq_job.state, pidginmq_job.scheduled_at, pidginmq_job.tags

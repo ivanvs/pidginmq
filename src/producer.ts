@@ -164,6 +164,10 @@ export class Producer {
     this.removeActiveJob(job.id);
   }
 
+  private jobFailHandler(job: Job) {
+    this.removeActiveJob(job.id);
+  }
+
   private fetchLoop() {
     if (!this.insertJobSubcsription) {
       this.insertJobSubcsription = this.notifier.onJobInsert((notification) =>
@@ -199,6 +203,7 @@ export class Producer {
           },
         );
         jobExecutor.onJobDone((job: Job) => this.jobDoneHandler(job));
+        jobExecutor.onJobStopped((job: Job) => this.jobFailHandler(job));
         jobExecutor.execute();
         this.addActiveJob(job.id, jobExecutor);
         return jobExecutor;

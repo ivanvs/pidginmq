@@ -195,7 +195,7 @@ export class Executor {
   private toJob(dbJob: DbJob): Job {
     if (dbJob) {
       return {
-        id: dbJob.id,
+        id: parseInt(dbJob.id, 10),
         attempt: dbJob.attempt,
         attemptedAt: dbJob.attempted_at,
         attemptedBy: dbJob.attempted_by,

@@ -14,7 +14,7 @@ export interface JobExecutorOptions {
   scheduleInterval: number;
 }
 
-export type JobDoneHandler = (job: Job) => void;
+export type JobHandler = (job: Job) => void;
 
 export const DEFAULT_JOB_EXECUTOR_OPTIONS = {
   jobTimeout: 15_000,
@@ -26,6 +26,7 @@ export class JobExecutor {
   private stats: JobStatistics;
   private abortController: AbortController;
   private jobDoneSubject: Subject<Job>;
+  private jobStoppedSubject: Subject<Job>;
 
   constructor(
     private job: Job,
@@ -65,10 +66,15 @@ export class JobExecutor {
     }
 
     this.jobDoneSubject = new Subject<Job>();
+    this.jobStoppedSubject = new Subject<Job>();
   }
 
-  onJobDone(handler: JobDoneHandler): Subscription {
+  onJobDone(handler: JobHandler): Subscription {
     return this.jobDoneSubject.subscribe(handler);
+  }
+
+  onJobStopped(handler: JobHandler): Subscription {
+    return this.jobStoppedSubject.subscribe(handler);
   }
 
   cancel() {
@@ -119,16 +125,30 @@ export class JobExecutor {
     this.jobDoneSubject.next(this.job);
     this.jobDoneSubject.complete();
     this.jobDoneSubject = null;
+
+    this.jobStoppedSubject.complete();
+    this.jobStoppedSubject = null;
+  }
+
+  private emitJobErrorEvent() {
+    this.jobStoppedSubject.next(this.job);
+    this.jobStoppedSubject.complete();
+    this.jobStoppedSubject = null;
+
+    this.jobDoneSubject.complete();
+    this.jobDoneSubject = null;
   }
 
   async reportResult() {
     try {
       await this.completer.jobSetStateIfRunning(this.stats, {
         id: this.job.id,
+        finalizedAtDoUpdate: true,
         finalizedAt: DateTime.utc().toJSDate(),
         state: 'completed',
       });
     } catch (err) {
+      console.error(err);
       //TODO log error
     }
   }
@@ -147,20 +167,24 @@ export class JobExecutor {
           id: this.job.id,
           maxAttempts: this.job.attempt + 1,
           state: 'scheduled',
+          scheduledAtDoUpdate: true,
           scheduledAt: DateTime.utc()
             .plus({ seconds: error.durationSeconds })
             .toJSDate(),
         });
+        this.emitJobErrorEvent();
         return;
       } else {
         await this.completer.jobSetStateIfRunning(this.stats, {
           id: this.job.id,
+          scheduledAtDoUpdate: true,
           scheduledAt: DateTime.utc()
             .plus({ seconds: error.durationSeconds })
             .toJSDate(),
           maxAttempts: this.job.attempt + 1,
           state: 'available',
         });
+        this.emitJobErrorEvent();
         return;
       }
     }
@@ -172,6 +196,7 @@ export class JobExecutor {
         finalizedAt: DateTime.utc().toJSDate(),
         state: 'cancelled',
       });
+      this.emitJobErrorEvent();
       return;
     }
 
@@ -182,6 +207,7 @@ export class JobExecutor {
         error: attemptError,
         state: 'cancelled',
       });
+      this.emitJobErrorEvent();
       return;
     }
     const nextRetry = this.clientRetryPolicy(this.job);
@@ -209,5 +235,6 @@ export class JobExecutor {
         state: 'retryable',
       });
     }
+    this.emitJobErrorEvent();
   }
 }

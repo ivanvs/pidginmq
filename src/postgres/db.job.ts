@@ -1,7 +1,7 @@
 import { AttemptError, JobState } from '../types/job.js';
 
 export interface DbJob {
-  id: number;
+  id: string;
   attempt: number;
   attempted_at: Date;
   attempted_by: string[];

@@ -45,8 +45,8 @@ export const DEFAULT_CLIENT_OPTIONS = {
   cancelledJobRetentionPeriod: 24 * 60 * 60 * 1_000, // 24h
   completedJobRetentionPeriod: 24 * 60 * 60 * 1_000, // 24h
   discardedJobRetentionPeriod: 24 * 60 * 60 * 1_000, // 24h
-  fetchCoolDown: 20 * 100,
-  fetchPollInterval: 50 * 100,
+  fetchCoolDown: 200,
+  fetchPollInterval: 500,
   id: 'default',
   jobTimeout: 60 * 1_000,
   rescueStuckJobsAfter: 60 * 60 * 1_000,
@@ -302,7 +302,7 @@ export class Client {
     this.publishEvent(event.job, stats);
   }
 
-  async stopProducers() {
+  private async stopProducers() {
     for (const [key, value] of this.producersByName) {
       this.logger.debug(`Stopping producer for queue: ${key}`);
       await value.stop();
