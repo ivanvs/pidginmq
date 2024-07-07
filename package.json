@@ -23,7 +23,8 @@
   "keywords": [
     "pidginmq",
     "queues",
-    "jobs"
+    "jobs",
+    "postgresql"
   ],
   "author": "Ivan Vasiljevic",
   "license": "MIT",
