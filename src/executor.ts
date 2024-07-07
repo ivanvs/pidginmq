@@ -27,7 +27,17 @@ import { DbDriver } from './types/db.driver.js';
 import { Job, JobState } from './types/job.js';
 import { Leader } from './types/leader.js';
 
-export interface InserJobParams {
+export interface RepetableJobParams {
+  cron: string;
+  limit: number;
+  every: number;
+}
+
+export interface InsertRepetableJobParams extends InsertJobParams {
+  repeat: RepetableJobParams;
+}
+
+export interface InsertJobParams {
   args: any;
   kind: string;
   maxAttempts: number;
@@ -172,7 +182,7 @@ export interface JobQueryParams {
 export class Executor {
   constructor(private db: DbDriver) {}
 
-  async insertJob(params: InserJobParams): Promise<Job> {
+  async insertJob(params: InsertJobParams): Promise<Job> {
     const values = [
       params.args, //1
       null, //2

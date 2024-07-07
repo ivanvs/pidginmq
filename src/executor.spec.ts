@@ -1,6 +1,7 @@
 import { Executor } from './executor.js';
 import { PostgresDbDriver } from './postgres/pg.db.driver.js';
 import { getTestContainer } from './util/test.container.js';
+import { NoLogger } from './logger/logger.js';
 
 describe('executor', () => {
   jest.setTimeout(60000);
@@ -12,14 +13,17 @@ describe('executor', () => {
   beforeAll(async () => {
     postgresContainer = await getTestContainer().start();
 
-    driver = new PostgresDbDriver({
-      host: postgresContainer.getHost(),
-      port: postgresContainer.getPort(),
-      database: postgresContainer.getDatabase(),
-      user: postgresContainer.getUsername(),
-      password: postgresContainer.getPassword(),
-      ssl: false,
-    });
+    driver = new PostgresDbDriver(
+      {
+        host: postgresContainer.getHost(),
+        port: postgresContainer.getPort(),
+        database: postgresContainer.getDatabase(),
+        user: postgresContainer.getUsername(),
+        password: postgresContainer.getPassword(),
+        ssl: false,
+      },
+      NoLogger,
+    );
 
     await expect(driver.open()).resolves.not.toThrow();
     executor = new Executor(driver);

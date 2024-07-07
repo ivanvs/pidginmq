@@ -1,4 +1,5 @@
 import { DbDriver } from 'src/types/db.driver.js';
+import { PidginMqLogger } from '../logger/logger.js';
 import pg, { Pool, Notification, Client } from 'pg';
 import { Subject, Subscription } from 'rxjs';
 
@@ -15,7 +16,11 @@ export class PostgresDbDriver implements DbDriver {
   private connection: Pool;
   private eventSubject: Subject<Notification>;
   private notificationClient: Client;
-  constructor(private options: PostgresDbOptions) {}
+
+  constructor(
+    private options: PostgresDbOptions,
+    private logger: PidginMqLogger,
+  ) {}
 
   get connected(): boolean {
     return !!this.connection;
@@ -23,6 +28,7 @@ export class PostgresDbDriver implements DbDriver {
 
   async open() {
     if (!this.connection) {
+      this.logger.debug('Opening new connection to databse');
       this.connection = new Pool(this.options);
       await this.execute('SELECT 1');
 
@@ -37,6 +43,7 @@ export class PostgresDbDriver implements DbDriver {
 
   async close(): Promise<void> {
     if (this.connection) {
+      this.logger.debug('Closing connection to database');
       this.notificationClient.end();
       this.notificationClient = null;
 

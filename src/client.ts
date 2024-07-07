@@ -1,5 +1,10 @@
 import { DateTime } from 'luxon';
-import { Executor, InserJobParams, JobQueryParams } from './executor.js';
+import {
+  Executor,
+  InsertJobParams,
+  InsertRepetableJobParams,
+  JobQueryParams,
+} from './executor.js';
 import {
   PostgresDbDriver,
   PostgresDbOptions,
@@ -19,6 +24,8 @@ import { CompletedJobEvent, JobCompleter } from './job.completer.js';
 import { DEFAULT_BATCH_SIZE, JobCleaner } from './job.cleaner.js';
 import { JobRescuer } from './job.rescuer.js';
 import { Scheduler } from './scheduler.js';
+import { CronExpression, parseExpression } from 'cron-parser';
+import { SCHEDULED_JOB_WORKER } from './scheduled.job.worker.js';
 
 export interface QueueConfig {
   maxWorkers: number;
@@ -54,6 +61,15 @@ export const DEFAULT_CLIENT_OPTIONS = {
   schedulerInterval: 1_000,
   logger: NoLogger,
 };
+
+export const SCHEDULED_JOB_QUEUE = '__pidginmq_scheduler';
+export const SCHEDULED_JOB_KIND = '__pidginmq_scheduler_kind';
+
+export interface ScheduledJobArgs {
+  options: InsertRepetableJobParams;
+  scheduledTimes: number;
+  lastRun: string;
+}
 
 export type SubscriptionHandler = (event: Event) => void;
 export type SubscriptionErrorHandler = (error: any) => void;
@@ -155,6 +171,7 @@ export class Client {
         );
       }
     });
+    this.options.queues.set(SCHEDULED_JOB_KIND, { maxWorkers: 1 });
 
     if (this.options.workers && !this.options.queues) {
       throw new ValidationException('Workers must be set if queues are set');
@@ -162,8 +179,13 @@ export class Client {
       this.workers = this.options.workers;
     }
 
-    this.db = new PostgresDbDriver(this.options.dbConfig);
+    this.db = new PostgresDbDriver(this.options.dbConfig, this.logger);
     this.executor = new Executor(this.db);
+
+    this.workers.addWorker(
+      SCHEDULED_JOB_KIND,
+      SCHEDULED_JOB_WORKER(this.executor),
+    );
 
     this.completer = new JobCompleter(this.executor);
     this.producersByName = new Map<string, Producer>();
@@ -323,7 +345,7 @@ export class Client {
     this.eventSubject = null;
   }
 
-  addJob(options: InserJobParams): Promise<Job> {
+  addJob(options: InsertJobParams): Promise<Job> {
     return this.executor.insertJob(options);
   }
 
@@ -337,6 +359,70 @@ export class Client {
 
   getJob(id: number): Promise<Job> {
     return this.executor.getJobById(id);
+  }
+
+  private parseCron(cron): CronExpression {
+    try {
+      return parseExpression(cron, { utc: true });
+    } catch (e) {
+      throw new ValidationException(e.toString());
+    }
+  }
+
+  async scheduleJob(options: InsertRepetableJobParams): Promise<Job> {
+    let scheduledTime: Date;
+    if (options.repeat && options.repeat.cron) {
+      const expression = this.parseCron(options.repeat.cron);
+      scheduledTime = expression.next().toDate();
+    } else if (options?.repeat?.every <= 0) {
+      throw new ValidationException(
+        'Repeat field every should be supplied since cron is not set',
+      );
+    } else {
+      scheduledTime = DateTime.utc()
+        .plus({ seconds: options.repeat.every })
+        .toJSDate();
+    }
+
+    if (options?.repeat?.limit <= 0) {
+      throw new ValidationException(
+        'Repeat field limit cannot be less then or equal to 0',
+      );
+    }
+
+    const scheduledArgs: ScheduledJobArgs = {
+      options,
+      scheduledTimes: 0,
+      lastRun: DateTime.utc().toISOTime(),
+    };
+    const scheduledParams: InsertJobParams = {
+      metadata: scheduledArgs,
+      queue: SCHEDULED_JOB_QUEUE,
+      maxAttempts: 3,
+      priority: 1,
+      scheduletAt: scheduledTime,
+      kind: SCHEDULED_JOB_KIND,
+      args: {},
+      tags: [],
+    };
+
+    const scheduledJob = await this.executor.insertJob(scheduledParams);
+
+    const jobMetadata = {
+      scheduledJobId: scheduledJob.id,
+      ...options.metadata,
+    };
+    const nextJobParams: InsertJobParams = {
+      metadata: jobMetadata,
+      queue: options.queue,
+      maxAttempts: options.maxAttempts,
+      priority: options.priority,
+      scheduletAt: scheduledTime,
+      kind: options.kind,
+      args: options.args,
+      tags: options.tags,
+    };
+    return this.executor.insertJob(nextJobParams);
   }
 
   cancelJob(id: number): Promise<Job> {
