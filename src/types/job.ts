@@ -34,13 +34,15 @@ export interface Job {
   scheduledAt: Date;
 }
 
-export enum JobControlAction {
+export enum ControlAction {
   Cancel = 'cancel',
+  Pause = 'pause',
+  Resume = 'resume',
 }
 
 export interface JobControlPayload {
-  action: JobControlAction;
-  jobId: number;
+  action: ControlAction;
+  jobId?: number;
   queue: string;
 }
 

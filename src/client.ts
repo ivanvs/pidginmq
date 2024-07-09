@@ -10,7 +10,12 @@ import {
   PostgresDbOptions,
 } from './postgres/pg.db.driver.js';
 import { DbDriver } from './types/db.driver.js';
-import { Job, JobStatistics } from './types/job.js';
+import {
+  ControlAction,
+  Job,
+  JobControlPayload,
+  JobStatistics,
+} from './types/job.js';
 import { Subject, Subscription } from 'rxjs';
 import { Event, EventKind } from './types/event.js';
 import { NotificationTopic, Notifier } from './notifier.js';
@@ -26,6 +31,7 @@ import { JobRescuer } from './job.rescuer.js';
 import { Scheduler } from './scheduler.js';
 import { CronExpression, parseExpression } from 'cron-parser';
 import { SCHEDULED_JOB_WORKER } from './scheduled.job.worker.js';
+import { Queue } from './types/queue.js';
 
 export interface QueueConfig {
   maxWorkers: number;
@@ -221,28 +227,28 @@ export class Client {
 
     this.producersByName = new Map<string, Producer>();
     this.options.queues.forEach((value, key) => {
-      this.producersByName.set(
-        key,
-        new Producer(
-          this.notifier,
-          this.retryPolicy,
-          this.workers,
-          this.executor,
-          this.completer,
-          {
-            clientId: this.options.id,
-            fetchCoolDown: this.options.fetchCoolDown,
-            fetchPollInterval: this.options.fetchPollInterval,
-            jobTimeout: this.options.jobTimeout,
-            scheduleInterval: this.options.schedulerInterval,
-            queue: key,
-            maxWorkerCount: value.maxWorkers,
-          },
-        ),
-      );
+      this.producersByName.set(key, this.createProducer(key, value.maxWorkers));
     });
+  }
 
-    this.workers = this.options.workers;
+  private createProducer(queueName: string, maxWorkers: number): Producer {
+    return new Producer(
+      this.notifier,
+      this.retryPolicy,
+      this.workers,
+      this.executor,
+      this.completer,
+      {
+        clientId: this.options.id,
+        fetchCoolDown: this.options.fetchCoolDown,
+        fetchPollInterval: this.options.fetchPollInterval,
+        jobTimeout: this.options.jobTimeout,
+        scheduleInterval: this.options.schedulerInterval,
+        queue: queueName,
+        maxWorkerCount: maxWorkers,
+        paused: false,
+      },
+    );
   }
 
   async start() {
@@ -267,7 +273,7 @@ export class Client {
     this.elector.run();
 
     this.producersByName.forEach((value) => {
-      value.run();
+      value.start();
     });
   }
 
@@ -278,7 +284,7 @@ export class Client {
       this.jobRescuer.start();
       this.jobCleaner.start();
       this.producersByName.forEach((value) => {
-        value.run();
+        value.start();
       });
     } else {
       this.jobRescuer.stop();
@@ -443,6 +449,50 @@ export class Client {
 
   addWorker(kind: string, handler: (job: Job) => void) {
     this.workers.addWorker(kind, handler);
+  }
+
+  addQueue(queueName: string, queueConfig: QueueConfig) {
+    if (queueName.length < 1 && queueName.length > 512) {
+      throw new ValidationException(
+        'Queue name must have length between 1 and 512 characters',
+      );
+    }
+
+    if (!queueConfig) {
+      throw new ValidationException('Queue config is not supplied');
+    }
+
+    const producer = this.createProducer(queueName, queueConfig.maxWorkers);
+    producer.start();
+    this.producersByName.set(queueName, producer);
+  }
+
+  async resumeQueue(name: string): Promise<Queue> {
+    const queue = await this.executor.queueResume(name);
+    await this.notifyQueueStatus(ControlAction.Resume, name);
+    return queue;
+  }
+
+  async pauseQueue(name: string): Promise<Queue> {
+    const queue = await this.executor.queuePause(name);
+    await this.notifyQueueStatus(ControlAction.Pause, name);
+    return queue;
+  }
+
+  private notifyQueueStatus(action: ControlAction, queue: string) {
+    const jobControlPayload: JobControlPayload = { action: action, queue };
+    this.executor.pgNotify(
+      NotificationTopic.NotificationTopicJobControl,
+      jobControlPayload,
+    );
+  }
+
+  async listQueues(limit: number): Promise<Queue[]> {
+    return this.executor.queryQueues(limit);
+  }
+
+  async getQueue(name: string): Promise<Queue> {
+    return this.executor.queueGet(name);
   }
 
   //TODO log statistics

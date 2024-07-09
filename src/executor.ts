@@ -1,5 +1,6 @@
 import { DbJob } from './postgres/db.job.js';
 import { DbLeader } from './postgres/db.leader.js';
+import { DbQueue } from './postgres/db.queue.js';
 import {
   CANCEL_JOB,
   DELETE_EXPIRED_LEADER,
@@ -7,6 +8,7 @@ import {
   GET_ELECTED_LEADER,
   GET_JOB_BY_KIND_MANY,
   GET_JOB_STUCK,
+  GET_QUEUE,
   INSERT_LEADER,
   JOB_DELETE_BEFORE,
   JOB_GET_BY_ID,
@@ -22,10 +24,17 @@ import {
   LEADER_ATTEMPT_ELECT,
   LEADER_ATTEMPT_REELECT,
   LEADER_RESIGN,
+  PAUSE_QUEUE,
+  PG_NOTIFY,
+  QUEUE_CREATE_OR_SET_UPDATE_AT,
+  QUEUE_DELETE_EXPIRED,
+  QUEUE_LIST,
+  RESUME_QUEUE,
 } from './postgres/querires.js';
 import { DbDriver } from './types/db.driver.js';
-import { Job, JobState } from './types/job.js';
+import { Job, JobControlPayload, JobState } from './types/job.js';
 import { Leader } from './types/leader.js';
+import { Queue } from './types/queue.js';
 
 export interface RepetableJobParams {
   cron: string;
@@ -177,6 +186,18 @@ export interface JobQueryParams {
   // sortField        JobListOrderByField
   // sortOrder        SortOrder
   state: JobState;
+}
+
+export interface QueueCreateOrSetUpdateAtParams {
+  metadata: string;
+  name: string;
+  pausedAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface QueueDeleteExpiredParams {
+  updatedAtHorizon: Date;
+  max: number;
 }
 
 export class Executor {
@@ -418,6 +439,16 @@ export class Executor {
     };
   }
 
+  private toQueue(queue: DbQueue): Queue {
+    return {
+      createdAt: queue.created_at,
+      updatedAt: queue.updated_at,
+      name: queue.name,
+      metadata: queue.metadata,
+      pausedAt: queue.paused_at,
+    };
+  }
+
   async getElectedLeader(name: string): Promise<Leader> {
     const result = await this.db.execute(GET_ELECTED_LEADER, name);
     return result.rows.length === 1 ? this.toLeader(result.rows[0]) : null;
@@ -488,5 +519,53 @@ export class Executor {
 
     const result = await this.db.execute(queryJobs, ...values);
     return result.rows.map((x) => this.toJob(x));
+  }
+
+  async queueResume(name: string): Promise<Queue> {
+    const result = await this.db.execute(RESUME_QUEUE, name);
+    return result.rows.length === 1 ? this.toQueue(result.rows[0]) : null;
+  }
+
+  async queuePause(name: string): Promise<Queue> {
+    const result = await this.db.execute(PAUSE_QUEUE, name);
+    return result.rows.length === 1 ? this.toQueue(result.rows[0]) : null;
+  }
+
+  async queryQueues(limit: number): Promise<Queue[]> {
+    const result = await this.db.execute(QUEUE_LIST, limit);
+    return result.rows.map((x) => this.toQueue(x));
+  }
+
+  async queueGet(name: string): Promise<Queue> {
+    const result = await this.db.execute(GET_QUEUE, name);
+    return result.rows.length === 1 ? this.toQueue(result.rows[0]) : null;
+  }
+
+  async queueDeleteExpired(params: QueueDeleteExpiredParams): Promise<Queue[]> {
+    const values = [params.updatedAtHorizon, params.max];
+    const result = await this.db.execute(QUEUE_DELETE_EXPIRED, ...values);
+    return result.rows.map((x) => this.toJob(x));
+  }
+
+  async queueCreateOrSetUpdateAt(
+    params: QueueCreateOrSetUpdateAtParams,
+  ): Promise<Queue> {
+    const values = [
+      params.metadata,
+      params.name,
+      params.pausedAt,
+      params.updatedAt,
+    ];
+    const result = await this.db.execute(
+      QUEUE_CREATE_OR_SET_UPDATE_AT,
+      ...values,
+    );
+
+    return result.rows.length === 1 ? this.toQueue(result.rows[0]) : null;
+  }
+
+  async pgNotify(topic: string, payload: JobControlPayload) {
+    const values = [topic, payload];
+    await this.db.execute(PG_NOTIFY, ...values);
   }
 }

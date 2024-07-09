@@ -7,7 +7,7 @@ import { ClientRetryPolicy } from './retry.policy';
 import { DEFAULT_PRODUCER_OPTIONS, Producer } from './producer';
 import { ValidationException } from './exceptions/validation.exception';
 
-describe('job executor', () => {
+describe('producer', () => {
   let workers: MockProxy<Workers>;
   let completer: MockProxy<JobCompleter>;
   let retryPolicy: ClientRetryPolicy;
@@ -320,7 +320,7 @@ describe('job executor', () => {
       options,
     );
 
-    expect(() => producer.run()).not.toThrow();
+    await expect(() => producer.start()).not.toThrow();
     await expect(producer.stop()).resolves.not.toThrow();
   });
 });

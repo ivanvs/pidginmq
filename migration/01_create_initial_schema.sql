@@ -107,3 +107,11 @@ CREATE UNLOGGED TABLE pidginmq_leader(
 ALTER TABLE pidginmq_job ALTER COLUMN tags SET DEFAULT '{}';
 UPDATE pidginmq_job SET tags = '{}' WHERE tags IS NULL;
 ALTER TABLE pidginmq_job ALTER COLUMN tags SET NOT NULL;
+
+CREATE TABLE pidginmq_queue(
+  name text PRIMARY KEY NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT NOW(),
+  metadata jsonb NOT NULL DEFAULT '{}' ::jsonb,
+  paused_at timestamptz,
+  updated_at timestamptz NOT NULL
+);

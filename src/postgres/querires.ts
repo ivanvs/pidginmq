@@ -381,3 +381,114 @@ notified_resignations AS (
 DELETE FROM pidginmq_leader USING notified_resignations
 WHERE pidginmq_leader.name = notified_resignations.name
 `;
+
+export const QUEUE_CREATE_OR_SET_UPDATE_AT = `
+INSERT INTO pidginmq_queue(
+    created_at,
+    metadata,
+    name,
+    paused_at,
+    updated_at
+) VALUES (
+    now(),
+    coalesce($1::jsonb, '{}'::jsonb),
+    $2::text,
+    coalesce($3::timestamptz, NULL),
+    coalesce($4::timestamptz, now())
+) ON CONFLICT (name) DO UPDATE
+SET
+    updated_at = coalesce($4::timestamptz, now())
+RETURNING name, created_at, metadata, paused_at, updated_at`;
+
+export const QUEUE_DELETE_EXPIRED = `
+DELETE FROM pidginmq_queue
+WHERE name IN (
+    SELECT name
+    FROM pidginmq_queue
+    WHERE updated_at < $1::timestamptz
+    ORDER BY name ASC
+    LIMIT $2::bigint
+)
+RETURNING name, created_at, metadata, paused_at, updated_at
+`;
+
+export const GET_QUEUE = `
+SELECT name, created_at, metadata, paused_at, updated_at
+FROM pidginmq_queue
+WHERE name = $1::text
+`;
+
+export const QUEUE_LIST = `
+SELECT name, created_at, metadata, paused_at, updated_at
+FROM pidginmq_queue
+ORDER BY name ASC
+LIMIT $1::integer
+`;
+
+export const PAUSE_QUEUE = `
+WITH queue_to_update AS (
+    SELECT name, paused_at
+    FROM pidginmq_queue
+    WHERE CASE WHEN $1::text = '*' THEN true ELSE name = $1 END
+    FOR UPDATE
+),
+updated_queue AS (
+    UPDATE pidginmq_queue
+    SET
+        paused_at = now(),
+        updated_at = now()
+    FROM queue_to_update
+    WHERE pidginmq_queue.name = queue_to_update.name
+        AND pidginmq_queue.paused_at IS NULL
+    RETURNING pidginmq_queue.name, pidginmq_queue.created_at, pidginmq_queue.metadata, pidginmq_queue.paused_at, pidginmq_queue.updated_at
+)
+SELECT name, created_at, metadata, paused_at, updated_at
+FROM pidginmq_queue
+WHERE name = $1
+    AND name NOT IN (SELECT name FROM updated_queue)
+UNION
+SELECT name, created_at, metadata, paused_at, updated_at
+FROM updated_queue
+`;
+
+export const RESUME_QUEUE = `
+WITH queue_to_update AS (
+    SELECT name
+    FROM pidginmq_queue
+    WHERE CASE WHEN $1::text = '*' THEN true ELSE pidginmq_queue.name = $1::text END
+    FOR UPDATE
+),
+updated_queue AS (
+    UPDATE pidginmq_queue
+    SET
+        paused_at = NULL,
+        updated_at = now()
+    FROM queue_to_update
+    WHERE pidginmq_queue.name = queue_to_update.name
+    RETURNING pidginmq_queue.name, pidginmq_queue.created_at, pidginmq_queue.metadata, pidginmq_queue.paused_at, pidginmq_queue.updated_at
+)
+SELECT name, created_at, metadata, paused_at, updated_at
+FROM pidginmq_queue
+WHERE name = $1
+    AND name NOT IN (SELECT name FROM updated_queue)
+UNION
+SELECT name, created_at, metadata, paused_at, updated_at
+FROM updated_queue
+`;
+
+export const PG_NOTIFY = `
+WITH topic_to_notify AS (
+    SELECT
+        concat(current_schema(), '.', $1::text) AS topic,
+        unnest($2::text[]) AS payload
+)
+SELECT pg_notify(
+    topic_to_notify.topic,
+    topic_to_notify.payload
+  )
+FROM topic_to_notify
+`;
+
+export const PG_ADVISORY_X_ACT_LOCK = `
+SELECT pg_advisory_xact_lock($1)
+`;

@@ -2,9 +2,9 @@ import { Subscription } from 'rxjs';
 import { Executor } from './executor.js';
 import { DbNotification, Notifier } from './notifier.js';
 import {
+  ControlAction,
   InsertJobPayload,
   Job,
-  JobControlAction,
   JobControlPayload,
 } from './types/job.js';
 import { Nullable } from './util/util.types.js';
@@ -24,6 +24,7 @@ export interface ProducerOptions {
   maxWorkerCount: number;
   jobTimeout: number;
   scheduleInterval: number;
+  paused: boolean;
 }
 
 export const DEFAULT_PRODUCER_OPTIONS: ProducerOptions = {
@@ -34,6 +35,7 @@ export const DEFAULT_PRODUCER_OPTIONS: ProducerOptions = {
   maxWorkerCount: 100,
   jobTimeout: 1_000,
   scheduleInterval: 1_000,
+  paused: false,
 };
 
 export class Producer {
@@ -42,6 +44,7 @@ export class Producer {
   private fetchTimeout: Nullable<NodeJS.Timeout>;
   private activeJobs: Map<number, JobExecutor>;
   private throttleFetch;
+  private paused;
 
   constructor(
     private notifier: Notifier,
@@ -113,6 +116,7 @@ export class Producer {
       throw new ValidationException('Queue cannot be empty');
     }
 
+    this.paused = this.options.paused;
     this.activeJobs = new Map<number, JobExecutor>();
     this.throttleFetch = throttle(
       () => this.fetch(),
@@ -120,20 +124,52 @@ export class Producer {
     );
   }
 
-  run() {
-    this.jobControlSubscription = this.notifier.onJobControl(this.onJobControl);
-    this.fetchLoop();
+  async start(): Promise<void> {
+    try {
+      this.jobControlSubscription = this.notifier.onJobControl(
+        this.onJobControl,
+      );
+      const queue = await this.executor.queueCreateOrSetUpdateAt({
+        metadata: '{}',
+        name: this.options.queue,
+      });
+
+      const initiallyPaused = queue && queue.pausedAt;
+      this.paused = initiallyPaused;
+
+      this.fetchLoop();
+    } catch (e) {
+      await this.stop();
+    }
   }
 
   onJobControl(notification: DbNotification): void {
     const parsed: JobControlPayload = JSON.parse(notification.payload);
 
-    if (
-      parsed.action === JobControlAction.Cancel &&
-      parsed.jobId > 0 &&
-      this.options.queue === parsed.queue
-    ) {
-      this.cancelJob(parsed.jobId);
+    switch (parsed.action) {
+      case ControlAction.Cancel:
+        if (parsed.jobId > 0 && this.options.queue === parsed.queue) {
+          this.cancelJob(parsed.jobId);
+        }
+        break;
+      case ControlAction.Pause:
+        if (
+          parsed.queue !== '*' &&
+          parsed.queue !== this.options.queue &&
+          !this.paused
+        ) {
+          this.paused = true;
+        }
+        break;
+      case ControlAction.Resume:
+        if (
+          parsed.queue !== '*' &&
+          parsed.queue !== this.options.queue &&
+          this.paused
+        ) {
+          this.paused = false;
+        }
+        break;
     }
   }
 
@@ -184,6 +220,11 @@ export class Producer {
 
   private async fetch(): Promise<void> {
     try {
+      if (this.paused) {
+        // queue is paused skip processing;
+        return;
+      }
+
       const jobs = await this.executor.jobGetAvailable({
         attemptedBy: this.options.clientId,
         max: this.maxJobToFetch(),
