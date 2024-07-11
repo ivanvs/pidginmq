@@ -10,6 +10,7 @@ import {
   GET_JOB_STUCK,
   GET_QUEUE,
   INSERT_LEADER,
+  JOB_DELETE,
   JOB_DELETE_BEFORE,
   JOB_GET_BY_ID,
   JOB_GET_BY_ID_MANY,
@@ -255,6 +256,11 @@ export class Executor {
     const dbJob = result.rows.length === 1 ? result.rows[0] : null;
 
     return this.toJob(dbJob);
+  }
+
+  async jobDelete(id: number): Promise<Job> {
+    const result = await this.db.execute(JOB_DELETE, id);
+    return result.rows.length === 1 ? result.rows[0] : 0;
   }
 
   async jobDeleteBefore(params: JobDeleteBeforeParams): Promise<number> {

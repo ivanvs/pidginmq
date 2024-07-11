@@ -66,6 +66,31 @@ SELECT id, args, attempt, attempted_at, attempted_by, created_at, errors, finali
 FROM updated_job
 `;
 
+export const JOB_DELETE = `
+WITH job_to_delete AS (
+    SELECT id
+    FROM pidginmq_job
+    WHERE pidginmq_job.id = $1
+    FOR UPDATE
+),
+deleted_job AS (
+    DELETE
+    FROM pidginmq_job
+    USING job_to_delete
+    WHERE pidginmq_job.id = job_to_delete.id
+        -- Do not touch running jobs:
+        AND pidginmq_job.state != 'running'::pidginmq_job_state
+    RETURNING pidginmq_job.id, pidginmq_job.args, pidginmq_job.attempt, pidginmq_job.attempted_at, pidginmq_job.attempted_by, pidginmq_job.created_at, pidginmq_job.errors, pidginmq_job.finalized_at, pidginmq_job.kind, pidginmq_job.max_attempts, pidginmq_job.metadata, pidginmq_job.priority, pidginmq_job.queue, pidginmq_job.state, pidginmq_job.scheduled_at, pidginmq_job.tags
+)
+SELECT id, args, attempt, attempted_at, attempted_by, created_at, errors, finalized_at, kind, max_attempts, metadata, priority, queue, state, scheduled_at, tags
+FROM pidginmq_job
+WHERE id = $1::bigint
+    AND id NOT IN (SELECT id FROM deleted_job)
+UNION
+SELECT id, args, attempt, attempted_at, attempted_by, created_at, errors, finalized_at, kind, max_attempts, metadata, priority, queue, state, scheduled_at, tags
+FROM deleted_job
+`;
+
 export const JOB_DELETE_BEFORE = `
 WITH deleted_jobs AS (
     DELETE FROM pidginmq_job

@@ -355,6 +355,10 @@ export class Client {
     return this.executor.insertJob(options);
   }
 
+  deleteJob(id: number): Promise<Job> {
+    return this.executor.jobDelete(id);
+  }
+
   queryJobs(options: JobQueryParams): Promise<Job[]> {
     return this.executor.queryJobs(options);
   }
@@ -437,6 +441,10 @@ export class Client {
       cancelAttemtedAt: DateTime.utc().toJSDate(),
       jobControlTopic: NotificationTopic.NotificationTopicJobControl,
     });
+  }
+
+  listJobs(params: JobQueryParams) {
+    return this.executor.queryJobs(params);
   }
 
   subscribe(options: SubscribeOptions): Subscription {
