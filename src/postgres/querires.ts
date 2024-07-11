@@ -505,7 +505,7 @@ export const PG_NOTIFY = `
 WITH topic_to_notify AS (
     SELECT
         concat(current_schema(), '.', $1::text) AS topic,
-        unnest($2::text[]) AS payload
+        $2::text AS payload
 )
 SELECT pg_notify(
     topic_to_notify.topic,

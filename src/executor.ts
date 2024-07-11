@@ -571,7 +571,7 @@ export class Executor {
   }
 
   async pgNotify(topic: string, payload: JobControlPayload) {
-    const values = [topic, payload];
+    const values = [topic, JSON.stringify(payload)];
     await this.db.execute(PG_NOTIFY, ...values);
   }
 }
