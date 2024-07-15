@@ -60,4 +60,11 @@ describe('executor', () => {
     expect(job.tags[0]).toBe('test');
     expect(job.id).not.toBeNull();
   });
+
+  it('should able to query jobs by state', async () => {
+    const jobs = await executor.queryJobs({ limitCount: 20, state: 'running' });
+
+    expect(jobs).not.toBeNull();
+    expect(jobs.length).toBe(0);
+  });
 });

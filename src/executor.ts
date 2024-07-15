@@ -180,13 +180,13 @@ export interface LeaderResignParams {
 }
 
 export interface JobQueryParams {
-  kinds: string[];
-  limitCount: number;
-  skip: number;
-  queues: string[];
+  kinds?: string[];
+  limitCount?: number;
+  skip?: number;
+  queues?: string[];
   // sortField        JobListOrderByField
   // sortOrder        SortOrder
-  state: JobState;
+  state?: JobState;
 }
 
 export interface QueueCreateOrSetUpdateAtParams {
@@ -490,36 +490,38 @@ export class Executor {
 
     const addWhereOrAnd = (condition) => {
       if (condition.length === 0) {
-        return 'WHERE ';
+        return ' WHERE ';
       } else {
         return condition + ' AND ';
       }
     };
 
-    if (params.kinds.length > 0) {
+    if (params?.kinds?.length > 0) {
       condition =
-        addWhereOrAnd(condition) + `kind = any(@${values.length + 1}::text[])`;
+        addWhereOrAnd(condition) + `kind = any($${values.length + 1}::text[])`;
       values.push(params.kinds);
     }
 
-    if (params.queues.length > 0) {
+    if (params?.queues?.length > 0) {
       condition =
-        addWhereOrAnd(condition) + `queue = any(@${values.length + 1}::text[])`;
+        addWhereOrAnd(condition) + `queue = any($${values.length + 1}::text[])`;
       values.push(params.queues);
     }
 
-    if (params.state) {
+    if (params?.state) {
       condition =
         addWhereOrAnd(condition) +
-        `state = @${values.length + 1}::pdiginmq_job_state`;
-      values.push(params.state);
+        `state = $${values.length + 1}::pidginmq_job_state`;
+      values.push(params.state as string);
     }
 
-    queryJobs += condition + ` LIMIT @${values.length + 1}::integer`;
-    values.push(params.limitCount);
+    if (params?.limitCount > 0) {
+      queryJobs += condition + ` LIMIT $${values.length + 1}::integer`;
+      values.push(params.limitCount);
+    }
 
-    if (params.skip) {
-      queryJobs += ` OFFSET @${values.length + 1}::integer`;
+    if (params?.skip) {
+      queryJobs += ` OFFSET $${values.length + 1}::integer`;
       values.push(params.skip);
     }
 
