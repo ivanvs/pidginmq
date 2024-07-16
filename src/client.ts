@@ -177,7 +177,7 @@ export class Client {
         );
       }
     });
-    this.options.queues.set(SCHEDULED_JOB_KIND, { maxWorkers: 1 });
+    this.options.queues.set(SCHEDULED_JOB_QUEUE, { maxWorkers: 1 });
 
     if (this.options.workers && !this.options.queues) {
       throw new ValidationException('Workers must be set if queues are set');
