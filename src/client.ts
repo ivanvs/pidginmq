@@ -39,19 +39,19 @@ export interface QueueConfig {
 
 export interface ClientOptions {
   dbConfig: PostgresDbOptions;
-  cancelledJobRetentionPeriod: number;
-  completedJobRetentionPeriod: number;
-  discardedJobRetentionPeriod: number;
-  fetchCoolDown: number;
-  fetchPollInterval: number;
-  id: string;
-  jobTimeout: number;
-  rescueStuckJobsAfter: number;
-  retryPolicy: ClientRetryPolicy;
-  schedulerInterval: number;
+  cancelledJobRetentionPeriod?: number;
+  completedJobRetentionPeriod?: number;
+  discardedJobRetentionPeriod?: number;
+  fetchCoolDown?: number;
+  fetchPollInterval?: number;
+  id?: string;
+  jobTimeout?: number;
+  rescueStuckJobsAfter?: number;
+  retryPolicy?: ClientRetryPolicy;
+  schedulerInterval?: number;
   workers: Workers;
   queues: Map<string, QueueConfig>;
-  logger: PidginMqLogger;
+  logger?: PidginMqLogger;
 }
 
 export const DEFAULT_CLIENT_OPTIONS = {
@@ -106,7 +106,7 @@ export class Client {
   private jobScheduler: Scheduler;
 
   constructor(options: ClientOptions) {
-    this.options = options;
+    this.options = { ...DEFAULT_CLIENT_OPTIONS, ...options };
 
     if (!this.options.id) {
       throw new ValidationException('ID is not supplied');
