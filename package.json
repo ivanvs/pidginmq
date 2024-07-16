@@ -25,7 +25,8 @@
     "pidginmq",
     "queues",
     "jobs",
-    "postgresql"
+    "postgresql",
+    "scheduler"
   ],
   "author": "Ivan Vasiljevic",
   "license": "MIT",
