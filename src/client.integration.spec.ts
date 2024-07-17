@@ -1,9 +1,4 @@
-import {
-  Client,
-  ClientOptions,
-  DEFAULT_CLIENT_OPTIONS,
-  QueueConfig,
-} from './client';
+import { Client, ClientOptions, QueueConfig } from './client';
 import { SnoozeJobException } from './exceptions/snooze.job.exception';
 import { RetryPolicies } from './retry.policy';
 import { sleep } from './util/promise';
@@ -20,18 +15,15 @@ describe('client integration tests', () => {
     postgresContainer = await getTestContainer().start();
 
     options = {
-      ...DEFAULT_CLIENT_OPTIONS,
-      ...{
-        workers: new Workers(),
-        queues: new Map<string, QueueConfig>(),
-        dbConfig: {
-          host: postgresContainer.getHost(),
-          port: postgresContainer.getPort(),
-          user: postgresContainer.getUsername(),
-          password: postgresContainer.getPassword(),
-          database: postgresContainer.getDatabase(),
-          ssl: false,
-        },
+      workers: new Workers(),
+      queues: new Map<string, QueueConfig>(),
+      dbConfig: {
+        host: postgresContainer.getHost(),
+        port: postgresContainer.getPort(),
+        user: postgresContainer.getUsername(),
+        password: postgresContainer.getPassword(),
+        database: postgresContainer.getDatabase(),
+        ssl: false,
       },
     };
     options.queues.set('test-queue', { maxWorkers: 1 });

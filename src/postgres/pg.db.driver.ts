@@ -3,12 +3,19 @@ import { PidginMqLogger } from '../logger/logger.js';
 import pg, { Pool, Notification, Client } from 'pg';
 import { Subject, Subscription } from 'rxjs';
 
+/** Configuration for connecting to PostgreSQL */
 export interface PostgresDbOptions {
+  /** PostgreSQL IP address[s] or domain name[s] */
   host: string;
+  /** PostgreSQL server port */
   port: number;
+  /** Username of databse user*/
   user: string;
+  /** Password of database user*/
   password: string;
+  /** Database name */
   database: string;
+  /** Is SSL enalled or not */
   ssl: boolean;
 }
 

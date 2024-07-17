@@ -48,14 +48,14 @@ export interface InsertRepetableJobParams extends InsertJobParams {
 }
 
 export interface InsertJobParams {
-  args: any;
+  args?: any;
   kind: string;
-  maxAttempts: number;
-  metadata: any;
-  priority: number;
+  maxAttempts?: number;
+  metadata?: any;
+  priority?: number;
   queue: string;
-  scheduletAt: Date;
-  tags: string[];
+  scheduletAt?: Date;
+  tags?: string[];
 }
 
 export interface CancelJobParams {

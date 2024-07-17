@@ -1,7 +1,7 @@
 import { Job } from './types/job.js';
 import { PromiseOrDirect } from './util/util.types.js';
 
-export type WorkerFunction = (job?: Job) => PromiseOrDirect<void>;
+export type WorkerFunction = (job: Job) => PromiseOrDirect<void>;
 
 export class PidginWorker {
   constructor(private handler: WorkerFunction) {}

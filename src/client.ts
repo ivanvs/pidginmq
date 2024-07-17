@@ -54,7 +54,16 @@ export interface ClientOptions {
   logger?: PidginMqLogger;
 }
 
-export const DEFAULT_CLIENT_OPTIONS = {
+const DEFAULT_INSERT_JOB_PARAMS = {
+  args: {},
+  maxAttempts: 3,
+  metadata: {},
+  priority: 1,
+  scheduletAt: DateTime.utc().toJSDate(),
+  tags: [],
+};
+
+const DEFAULT_CLIENT_OPTIONS = {
   cancelledJobRetentionPeriod: 24 * 60 * 60 * 1_000, // 24h
   completedJobRetentionPeriod: 24 * 60 * 60 * 1_000, // 24h
   discardedJobRetentionPeriod: 24 * 60 * 60 * 1_000, // 24h
@@ -352,7 +361,8 @@ export class Client {
   }
 
   addJob(options: InsertJobParams): Promise<Job> {
-    return this.executor.insertJob(options);
+    const config = { ...DEFAULT_INSERT_JOB_PARAMS, ...options };
+    return this.executor.insertJob(config);
   }
 
   deleteJob(id: number): Promise<Job> {
