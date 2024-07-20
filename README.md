@@ -37,6 +37,8 @@ npm install pidginmq -S
 
 ## Examples
 
+Initialize the schema for PidginMQ in the database by running the script 01_create_initial_schema.sql, which can be found in the migration folder.
+
 Create a client:
 
 ```js
