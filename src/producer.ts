@@ -15,6 +15,7 @@ import { JobExecutor } from './job.executor.js';
 import { ValidationException } from './exceptions/validation.exception.js';
 import throttle from 'lodash.throttle';
 import { sleep } from './util/promise.js';
+import { logger } from './logger/logger.settings.js';
 
 export interface ProducerOptions {
   queue: string;
@@ -126,6 +127,7 @@ export class Producer {
 
   async start(): Promise<void> {
     try {
+      logger.info(`Starting producer: ${this.options.queue}`);
       this.jobControlSubscription = this.notifier.onJobControl(
         this.onJobControl,
       );
@@ -139,6 +141,7 @@ export class Producer {
 
       this.fetchLoop();
     } catch (e) {
+      logger.error(`Error on strting producer ${this.options.queue}`, e);
       await this.stop();
     }
   }
@@ -250,7 +253,7 @@ export class Producer {
         return jobExecutor;
       });
     } catch (e) {
-      console.error(e);
+      logger.error(`Error on job fetch: `, e);
     }
   }
 
@@ -263,6 +266,7 @@ export class Producer {
   }
 
   async stop(): Promise<void> {
+    logger.info(`Stopping producer: ${this.options.queue}`);
     while (this.activeJobs.size) {
       await sleep(1000);
     }
@@ -285,5 +289,6 @@ export class Producer {
     if (this.throttleFetch) {
       this.throttleFetch.cancel();
     }
+    logger.info(`Producer stopped: ${this.options.queue}`);
   }
 }

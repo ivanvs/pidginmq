@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 import { Job } from './types/job.js';
 import { ClientRetryPolicy, RetryPolicies } from './retry.policy.js';
 import { ValidationException } from './exceptions/validation.exception.js';
+import { logger } from './logger/logger.settings.js';
 
 export interface JobRescuerOptions {
   interval: number;
@@ -62,6 +63,7 @@ export class JobRescuer {
   }
 
   start() {
+    logger.info('Starting rescuer');
     if (!this.rescuerIntervalTimeout) {
       this.rescuerIntervalTimeout = setInterval(
         () => this.runOnce,
@@ -135,6 +137,7 @@ export class JobRescuer {
   }
 
   stop() {
+    logger.info('Stopping rescuer');
     if (this.rescuerIntervalTimeout) {
       clearInterval(this.rescuerIntervalTimeout);
       this.rescuerIntervalTimeout = null;

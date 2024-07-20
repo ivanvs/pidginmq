@@ -1,6 +1,7 @@
 import { Executor } from './executor.js';
 import { DateTime } from 'luxon';
 import { ValidationException } from './exceptions/validation.exception.js';
+import { logger } from './logger/logger.settings.js';
 
 export interface JobCleanerOptions {
   cancelledJobRetentionPeriod: number;
@@ -63,6 +64,7 @@ export class JobCleaner {
   }
 
   start() {
+    logger.info(`Starting job cleaner`);
     if (!this.cleanerIntervalTimout) {
       this.cleanerIntervalTimout = setInterval(
         () => this.runOnce(),
@@ -87,6 +89,7 @@ export class JobCleaner {
   }
 
   stop() {
+    logger.info('Stopping job cleaner');
     if (this.cleanerIntervalTimout) {
       clearInterval(this.cleanerIntervalTimout);
       this.cleanerIntervalTimout = null;

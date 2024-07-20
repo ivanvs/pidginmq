@@ -1,3 +1,4 @@
+import { logger } from './logger/logger.settings.js';
 import { DbJob } from './postgres/db.job.js';
 import { DbLeader } from './postgres/db.leader.js';
 import { DbQueue } from './postgres/db.queue.js';
@@ -525,6 +526,9 @@ export class Executor {
       values.push(params.skip);
     }
 
+    logger.debug(
+      `Query for searching jobs: ${queryJobs}, parameters are: ${JSON.stringify(values)}`,
+    );
     const result = await this.db.execute(queryJobs, ...values);
     return result.rows.map((x) => this.toJob(x));
   }

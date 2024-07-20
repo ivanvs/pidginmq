@@ -3,6 +3,7 @@ import { Executor } from './executor.js';
 import { DbNotification, NotificationTopic, Notifier } from './notifier.js';
 import { sleep } from './util/promise.js';
 import { DateTime } from 'luxon';
+import { logger } from './logger/logger.settings.js';
 
 interface LeadershipNotification {
   name: string;
@@ -49,6 +50,7 @@ export class Elector {
   }
 
   run() {
+    logger.info(`Elector is started`);
     this.notifier.onLeadership((notification) =>
       this.handleLeadershipMessage(notification),
     );
@@ -63,6 +65,7 @@ export class Elector {
   }
 
   async stop() {
+    logger.info('Elector is being stopped');
     await this.giveUpLeadership();
     if (this.timer) {
       clearInterval(this.timer);
@@ -73,6 +76,7 @@ export class Elector {
       this.leadershipSubject.complete();
       this.leadershipSubject = null;
     }
+    logger.info('Elector is stopped');
   }
 
   private async intervalHandler() {
@@ -85,7 +89,9 @@ export class Elector {
 
   private handleLeadershipMessage(notification: DbNotification) {
     if (notification.topic !== NotificationTopic.NotificationTopicLeadership) {
-      // TODO logging
+      logger.debug(
+        `Notification is not TopicLeadership: ${notification.topic}`,
+      );
       return;
     }
 
@@ -113,7 +119,7 @@ export class Elector {
 
       return elected;
     } catch (e) {
-      // TODO log error
+      logger.error(`Gain leadership failed: `, e);
       return false;
     }
   }
@@ -123,11 +129,11 @@ export class Elector {
       const reelected = await this.attemptElectOrReelect(true);
 
       if (!reelected) {
-        //TODO leadership is lost
+        logger.info(`Elector is not reelected`);
         this.leadershipSubject?.next({ isLeader: false, time: DateTime.utc() });
       }
     } catch (e) {
-      //TODO log error
+      logger.error(`Keep leadership failed: `, e);
     }
   }
 
@@ -138,7 +144,7 @@ export class Elector {
         this.leadershipSubject?.next({ isLeader: false, time: DateTime.utc() });
         return;
       } catch (e) {
-        //TODO log error
+        logger.error('Give up leadership failed: ', e);
       }
     }
   }

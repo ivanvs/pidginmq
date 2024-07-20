@@ -21,7 +21,6 @@ import { Event, EventKind } from './types/event.js';
 import { NotificationTopic, Notifier } from './notifier.js';
 import { Workers } from './worker.js';
 import { ClientRetryPolicy, RetryPolicies } from './retry.policy.js';
-import { NoLogger, PidginMqLogger } from './logger/logger.js';
 import { ValidationException } from './exceptions/validation.exception.js';
 import { Producer } from './producer.js';
 import { Elector, LeadershipEvent } from './elector.js';
@@ -32,6 +31,8 @@ import { Scheduler } from './scheduler.js';
 import { CronExpression, parseExpression } from 'cron-parser';
 import { SCHEDULED_JOB_WORKER } from './scheduled.job.worker.js';
 import { Queue } from './types/queue.js';
+import { LogLevels, setLogLevel, logger } from './logger/logger.settings.js';
+import { LogLevelDesc } from 'loglevel';
 
 export interface QueueConfig {
   maxWorkers: number;
@@ -51,7 +52,7 @@ export interface ClientOptions {
   schedulerInterval?: number;
   workers: Workers;
   queues: Map<string, QueueConfig>;
-  logger?: PidginMqLogger;
+  logLevel?: LogLevelDesc;
 }
 
 const DEFAULT_INSERT_JOB_PARAMS = {
@@ -74,7 +75,7 @@ const DEFAULT_CLIENT_OPTIONS = {
   rescueStuckJobsAfter: 60 * 60 * 1_000,
   retryPolicy: RetryPolicies.builtinPolicies.fixed(5_000),
   schedulerInterval: 1_000,
-  logger: NoLogger,
+  logger: LogLevels.SILENT,
 };
 
 export const SCHEDULED_JOB_QUEUE = '__pidginmq_scheduler';
@@ -103,7 +104,6 @@ export class Client {
   private eventSubject: Subject<Event>;
   private workers: Workers;
   private retryPolicy: ClientRetryPolicy;
-  private logger: PidginMqLogger;
   private notifier: Notifier;
   private producersByName: Map<string, Producer>;
   private statsAggregate: JobStatistics;
@@ -121,11 +121,7 @@ export class Client {
       throw new ValidationException('ID is not supplied');
     }
 
-    if (!this.options.logger) {
-      this.logger = NoLogger;
-    } else {
-      this.logger = this.options.logger;
-    }
+    setLogLevel(this?.options?.logLevel || LogLevels.SILENT);
 
     if (!this.options.retryPolicy) {
       this.retryPolicy = RetryPolicies.builtinPolicies.fixed(1_000);
@@ -194,7 +190,7 @@ export class Client {
       this.workers = this.options.workers;
     }
 
-    this.db = new PostgresDbDriver(this.options.dbConfig, this.logger);
+    this.db = new PostgresDbDriver(this.options.dbConfig);
     this.executor = new Executor(this.db);
 
     this.workers.addWorker(
@@ -261,6 +257,7 @@ export class Client {
   }
 
   async start() {
+    logger.info('Starting client');
     this.statsAggregate = {
       completeDuration: 0,
       queueWaitDuration: 0,
@@ -287,7 +284,7 @@ export class Client {
   }
 
   private async handleLeadershipChange(event: LeadershipEvent) {
-    this.logger.debug(`New leadership status: ${event.isLeader}`);
+    logger.debug(`New leadership status: ${event.isLeader}`);
 
     if (event.isLeader) {
       this.jobRescuer.start();
@@ -321,7 +318,7 @@ export class Client {
         kind = EventKind.JobFailed;
         break;
       default:
-        this.logger.error('Unhandled job state. Bug in PidginMQ');
+        logger.error(`Unhandled job state: ${job.state}. Bug in PidginMQ`);
         return;
     }
     if (this.eventSubject) {
@@ -341,12 +338,13 @@ export class Client {
 
   private async stopProducers() {
     for (const [key, value] of this.producersByName) {
-      this.logger.debug(`Stopping producer for queue: ${key}`);
+      logger.debug(`Stopping producer for queue: ${key}`);
       await value.stop();
     }
   }
 
   async stop() {
+    logger.info('Stopping client');
     this.notifier.stop();
     this.jobRescuer.stop();
     this.jobCleaner.stop();
@@ -362,22 +360,27 @@ export class Client {
 
   addJob(options: InsertJobParams): Promise<Job> {
     const config = { ...DEFAULT_INSERT_JOB_PARAMS, ...options };
+    logger.info(`Adding job: ${config}`);
     return this.executor.insertJob(config);
   }
 
   deleteJob(id: number): Promise<Job> {
+    logger.info(`Deleteing job: ${id}`);
     return this.executor.jobDelete(id);
   }
 
   queryJobs(options: JobQueryParams): Promise<Job[]> {
+    logger.info(`Quering job: ${options}`);
     return this.executor.queryJobs(options);
   }
 
   retryJob(id: number): Promise<Job> {
+    logger.info(`Retry job: ${id}`);
     return this.executor.retryJob(id);
   }
 
   getJob(id: number): Promise<Job> {
+    logger.info(`Get job: ${id}`);
     return this.executor.getJobById(id);
   }
 
@@ -390,6 +393,7 @@ export class Client {
   }
 
   async scheduleJob(options: InsertRepetableJobParams): Promise<Job> {
+    logger.info(`Schedule job: ${options}`);
     let scheduledTime: Date;
     if (options.repeat && options.repeat.cron) {
       const expression = this.parseCron(options.repeat.cron);
@@ -446,15 +450,12 @@ export class Client {
   }
 
   cancelJob(id: number): Promise<Job> {
+    logger.info(`Cancel job: ${id}`);
     return this.executor.cancelJob({
       id,
       cancelAttemtedAt: DateTime.utc().toJSDate(),
       jobControlTopic: NotificationTopic.NotificationTopicJobControl,
     });
-  }
-
-  listJobs(params: JobQueryParams) {
-    return this.executor.queryJobs(params);
   }
 
   subscribe(options: SubscribeOptions): Subscription {
@@ -466,10 +467,12 @@ export class Client {
   }
 
   addWorker(kind: string, handler: (job: Job) => void) {
+    logger.info(`Add worker for kind: ${kind}`);
     this.workers.addWorker(kind, handler);
   }
 
   addQueue(queueName: string, queueConfig: QueueConfig) {
+    logger.info(`Add queue: ${queueName}, with configuration: ${queueConfig}`);
     if (queueName.length < 1 && queueName.length > 512) {
       throw new ValidationException(
         'Queue name must have length between 1 and 512 characters',
@@ -486,12 +489,14 @@ export class Client {
   }
 
   async resumeQueue(name: string): Promise<Queue> {
+    logger.info(`Resume queue: ${name}`);
     const queue = await this.executor.queueResume(name);
     await this.notifyQueueStatus(ControlAction.Resume, name);
     return queue;
   }
 
   async pauseQueue(name: string): Promise<Queue> {
+    logger.info(`Pause queue: ${name}`);
     const queue = await this.executor.queuePause(name);
     await this.notifyQueueStatus(ControlAction.Pause, name);
     return queue;
@@ -506,10 +511,12 @@ export class Client {
   }
 
   async listQueues(limit: number): Promise<Queue[]> {
+    logger.info(`Search for queues. Limit: ${limit}`);
     return this.executor.queryQueues(limit);
   }
 
   async getQueue(name: string): Promise<Queue> {
+    logger.info(`Get queue: ${name}`);
     return this.executor.queueGet(name);
   }
 

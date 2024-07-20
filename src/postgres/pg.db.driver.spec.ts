@@ -3,7 +3,6 @@ import { getTestContainer } from '../util/test.container.js';
 import { PostgresDbDriver } from './pg.db.driver.js';
 import { Notification } from 'pg';
 import { defer } from '../util/promise.js';
-import { NoLogger } from '../logger/logger.js';
 
 describe('database', () => {
   jest.setTimeout(30000);
@@ -19,31 +18,25 @@ describe('database', () => {
   });
 
   const createDatabase = () => {
-    return new PostgresDbDriver(
-      {
-        host: postgresContainer.getHost(),
-        port: postgresContainer.getPort(),
-        database: postgresContainer.getDatabase(),
-        user: postgresContainer.getUsername(),
-        password: postgresContainer.getPassword(),
-        ssl: false,
-      },
-      NoLogger,
-    );
+    return new PostgresDbDriver({
+      host: postgresContainer.getHost(),
+      port: postgresContainer.getPort(),
+      database: postgresContainer.getDatabase(),
+      user: postgresContainer.getUsername(),
+      password: postgresContainer.getPassword(),
+      ssl: false,
+    });
   };
 
   it('should fail on invalid database host', async () => {
-    const driver = new PostgresDbDriver(
-      {
-        host: 'local',
-        port: postgresContainer.getPort(),
-        database: postgresContainer.getDatabase(),
-        user: postgresContainer.getUsername(),
-        password: postgresContainer.getPassword(),
-        ssl: false,
-      },
-      NoLogger,
-    );
+    const driver = new PostgresDbDriver({
+      host: 'local',
+      port: postgresContainer.getPort(),
+      database: postgresContainer.getDatabase(),
+      user: postgresContainer.getUsername(),
+      password: postgresContainer.getPassword(),
+      ssl: false,
+    });
 
     await expect(async () => await driver.open()).rejects.toThrow();
   });

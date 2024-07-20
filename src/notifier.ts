@@ -2,6 +2,7 @@ import { Subject, Subscription } from 'rxjs';
 import { DbDriver } from './types/db.driver.js';
 import { Notification } from 'pg';
 import { PidginException } from './exceptions/pidgin.exception.js';
+import { logger } from './logger/logger.settings.js';
 
 export enum NotificationTopic {
   NotificationTopicInsert = 'pidginmq_insert',
@@ -25,7 +26,9 @@ export class Notifier {
   constructor(private driver: DbDriver) {}
 
   start() {
+    logger.info('Starting notifier');
     if (!this.driver) {
+      logger.error(`The DB driver is not set`);
       throw new PidginException('Driver is not set');
     }
 
@@ -62,6 +65,7 @@ export class Notifier {
   };
 
   stop() {
+    logger.info('Stopping notifier');
     if (this.driverSubscription) {
       this.driver.unlisten(NotificationTopic.NotificationTopicInsert);
       this.driverSubscription?.unsubscribe();

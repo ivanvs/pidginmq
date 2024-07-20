@@ -8,6 +8,7 @@ import { ClientRetryPolicy } from './retry.policy.js';
 import { CancelJobException } from './exceptions/cancel.job.exception.js';
 import { SnoozeJobException } from './exceptions/snooze.job.exception.js';
 import { Subject, Subscription } from 'rxjs';
+import { logger } from './logger/logger.settings.js';
 
 export interface JobExecutorOptions {
   jobTimeout: number;
@@ -79,6 +80,7 @@ export class JobExecutor {
 
   cancel() {
     if (this.abortController && this.job) {
+      logger.info(`Canceling job: ${this.job.id}`);
       this.abortController.abort(
         new CancelJobException(
           this.job.id,
@@ -117,6 +119,7 @@ export class JobExecutor {
       await this.reportResult();
       this.emitJobDoneEvent();
     } catch (error) {
+      logger.error(`Failed to execute job: `, error);
       await this.reportError(error);
     }
   }
@@ -148,8 +151,7 @@ export class JobExecutor {
         state: 'completed',
       });
     } catch (err) {
-      console.error(err);
-      //TODO log error
+      logger.error(`Failed to report result: `, err);
     }
   }
 
@@ -217,7 +219,7 @@ export class JobExecutor {
       .as('millisecond');
 
     if (nextRetryDiff <= 0) {
-      //TODO retry is not valid, log error
+      logger.warn(`Retry is not valid: ${nextRetryDiff}`);
     }
 
     if (nextRetryDiff < this.options.scheduleInterval) {

@@ -1,3 +1,4 @@
+import { logger } from './logger/logger.settings.js';
 import { Job } from './types/job.js';
 import { PromiseOrDirect } from './util/util.types.js';
 
@@ -28,13 +29,15 @@ export class Workers {
 
   addWorker(kind: string, handler: WorkerFunction) {
     if (!kind || !handler) {
-      //TODO add logging
+      logger.warn('Worker do not have handler or kind', kind, handler);
       return;
     }
 
-    this.workers[kind] = handler;
+    if (!this.workers[kind]) {
+      logger.warn(`Worker for kind already exists: ${kind}`);
+    }
 
-    //TODO log if handler for kind is already registered
+    this.workers[kind] = handler;
   }
 
   getWorker(kind: string): WorkerFunction {
