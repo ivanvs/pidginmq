@@ -21,7 +21,7 @@ export interface Job {
   attemptedAt: Date;
   attemptedBy: string[];
   createdAt: Date;
-  encodedArgs: any;
+  args: any;
   finalizedAt: Date;
   kind: string;
   maxAttempts: number;

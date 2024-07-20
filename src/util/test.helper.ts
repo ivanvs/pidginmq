@@ -6,7 +6,7 @@ export const createFeakJob = () => ({
   attemptedAt: null,
   attemptedBy: [],
   createdAt: new Date(),
-  encodedArgs: {},
+  args: {},
   finalizedAt: null,
   kind: 'test',
   maxAttempts: 10,

@@ -6,7 +6,7 @@ export interface DbJob {
   attempted_at: Date;
   attempted_by: string[];
   created_at: Date;
-  encoded_args: any;
+  args: any;
   finalized_at: Date;
   kind: string;
   max_attempts: number;

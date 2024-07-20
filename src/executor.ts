@@ -233,7 +233,7 @@ export class Executor {
         attemptedAt: dbJob.attempted_at,
         attemptedBy: dbJob.attempted_by,
         createdAt: dbJob.created_at,
-        encodedArgs: dbJob.encoded_args,
+        args: dbJob.args,
         finalizedAt: dbJob.finalized_at,
         kind: dbJob.kind,
         maxAttempts: dbJob.max_attempts,

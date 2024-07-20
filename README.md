@@ -64,7 +64,7 @@ Stop the client:
 this.client.stop();
 ```
 
-Add worker:
+Add a worker:
 
 ```js
 this.client.addWorker('test', (job) => {
