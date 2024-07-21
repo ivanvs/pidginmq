@@ -32,7 +32,7 @@ export type ScheduledJobFactory = (executor: Executor) => WorkerFunction;
 export const SCHEDULED_JOB_WORKER: ScheduledJobFactory =
   (executor: Executor) =>
   async (job: Job): Promise<void> => {
-    const scheduledJobArgs: ScheduledJobArgs = JSON.parse(job.metadata);
+    const scheduledJobArgs: ScheduledJobArgs = job.metadata;
     const { cron, limit } = scheduledJobArgs.options.repeat;
     if (cron && scheduledJobArgs.scheduledTimes < limit) {
       const missedRunTimes = missedRuns(
@@ -57,7 +57,10 @@ export const SCHEDULED_JOB_WORKER: ScheduledJobFactory =
         newScheduledJobArgs.scheduledTimes++;
 
         const scheduledParams: InsertJobParams = {
-          metadata: newScheduledJobArgs,
+          metadata: {
+            ...newScheduledJobArgs,
+            createorJobId: job.id,
+          },
           queue: SCHEDULED_JOB_QUEUE,
           maxAttempts: 3,
           priority: 1,
@@ -68,25 +71,40 @@ export const SCHEDULED_JOB_WORKER: ScheduledJobFactory =
         };
 
         scheduledJob = await executor.insertJob(scheduledParams);
+
+        const nextJobParams: InsertJobParams = {
+          metadata: {
+            ...newScheduledJobArgs.options.metadata,
+            createorJobId: job.id,
+          },
+          queue: newScheduledJobArgs.options.queue,
+          maxAttempts: newScheduledJobArgs.options.maxAttempts || 3,
+          priority: newScheduledJobArgs.options.priority,
+          scheduletAt: nextRunTime.toJSDate(),
+          kind: newScheduledJobArgs.options.kind,
+          args: newScheduledJobArgs.options.args,
+          tags: newScheduledJobArgs.options.tags,
+        };
+        await executor.insertJob(nextJobParams);
       }
 
       missedRunTimes.forEach(async (scheduleAt) => {
         const { options } = scheduledJobArgs;
         const jobMetadata = {
-          scheduledJobId: scheduledJob.id,
+          createorJobId: scheduledJob.id,
           ...options.metadata,
         };
         const nextJobParams: InsertJobParams = {
           metadata: jobMetadata,
           queue: options.queue,
-          maxAttempts: options.maxAttempts,
+          maxAttempts: options.maxAttempts || 3,
           priority: options.priority,
           scheduletAt: scheduleAt.toJSDate(),
           kind: options.kind,
           args: options.args,
           tags: options.tags,
         };
-        return executor.insertJob(nextJobParams);
+        await executor.insertJob(nextJobParams);
       });
     }
   };

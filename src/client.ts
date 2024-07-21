@@ -365,12 +365,12 @@ export class Client {
   }
 
   deleteJob(id: number): Promise<Job> {
-    logger.info(`Deleteing job: ${id}`);
+    logger.info(`Deleting job: ${id}`);
     return this.executor.jobDelete(id);
   }
 
   queryJobs(options: JobQueryParams): Promise<Job[]> {
-    logger.info(`Quering job: ${options}`);
+    logger.info(`Quering job: ${JSON.stringify(options)}`);
     return this.executor.queryJobs(options);
   }
 
@@ -416,7 +416,7 @@ export class Client {
 
     const scheduledArgs: ScheduledJobArgs = {
       options,
-      scheduledTimes: 0,
+      scheduledTimes: 1,
       lastRun: DateTime.utc().toISOTime(),
     };
     const scheduledParams: InsertJobParams = {
@@ -433,7 +433,7 @@ export class Client {
     const scheduledJob = await this.executor.insertJob(scheduledParams);
 
     const jobMetadata = {
-      scheduledJobId: scheduledJob.id,
+      createorJobId: scheduledJob.id,
       ...options.metadata,
     };
     const nextJobParams: InsertJobParams = {

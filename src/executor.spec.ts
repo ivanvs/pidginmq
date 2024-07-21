@@ -63,4 +63,40 @@ describe('executor', () => {
     expect(jobs).not.toBeNull();
     expect(jobs.length).toBe(0);
   });
+
+  it('shoud delete a job', async () => {
+    const params = {
+      args: { name: 'test' },
+      kind: 'test',
+      maxAttempts: 1,
+      metadata: { name: 'test' },
+      priority: 1,
+      queue: 'test',
+      scheduletAt: new Date(),
+      tags: ['test'],
+    };
+
+    const job = await executor.insertJob(params);
+
+    expect(job).not.toBeNull();
+
+    const deletedJob = await executor.jobDelete(job.id);
+
+    expect(deletedJob).toBeTruthy();
+    expect(deletedJob.finalizedAt).not.toBeTruthy();
+    expect(deletedJob.kind).toBe('test');
+    expect(deletedJob.maxAttempts).toBe(1);
+    expect(deletedJob.metadata.name).toBe('test');
+    expect(deletedJob.queue).toBe('test');
+    expect(deletedJob.state).toBe('available');
+    expect(deletedJob.tags.length).toBe(1);
+    expect(deletedJob.tags[0]).toBe('test');
+    expect(deletedJob.id).toBeTruthy();
+  });
+
+  it(`should not be able to delete a job that doesn't exist`, async () => {
+    const deletedJob = await executor.jobDelete(115);
+
+    expect(deletedJob).toBeNull();
+  });
 });

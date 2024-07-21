@@ -39,9 +39,9 @@ import { Leader } from './types/leader.js';
 import { Queue } from './types/queue.js';
 
 export interface RepetableJobParams {
-  cron: string;
-  limit: number;
-  every: number;
+  cron?: string;
+  limit?: number;
+  every?: number;
 }
 
 export interface InsertRepetableJobParams extends InsertJobParams {
@@ -261,7 +261,7 @@ export class Executor {
 
   async jobDelete(id: number): Promise<Job> {
     const result = await this.db.execute(JOB_DELETE, id);
-    return result.rows.length === 1 ? result.rows[0] : 0;
+    return result.rows.length === 1 ? this.toJob(result.rows[0]) : null;
   }
 
   async jobDeleteBefore(params: JobDeleteBeforeParams): Promise<number> {
