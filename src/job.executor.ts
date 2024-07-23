@@ -167,6 +167,7 @@ export class JobExecutor {
       if (error.durationSeconds * 1_000 <= this.options.scheduleInterval) {
         await this.completer.jobSetStateIfRunning(this.stats, {
           id: this.job.id,
+          maxAttemptsUpdate: true,
           maxAttempts: this.job.attempt + 1,
           state: 'scheduled',
           scheduledAtDoUpdate: true,
@@ -183,6 +184,7 @@ export class JobExecutor {
           scheduledAt: DateTime.utc()
             .plus({ seconds: error.durationSeconds })
             .toJSDate(),
+          maxAttemptsUpdate: true,
           maxAttempts: this.job.attempt + 1,
           state: 'available',
         });
@@ -194,7 +196,9 @@ export class JobExecutor {
     if (error instanceof CancelJobException) {
       await this.completer.jobSetStateIfRunning(this.stats, {
         id: this.job.id,
+        errorDoUpdate: true,
         error: attemptError,
+        finalizedAtDoUpdate: true,
         finalizedAt: DateTime.utc().toJSDate(),
         state: 'cancelled',
       });
@@ -205,7 +209,9 @@ export class JobExecutor {
     if (this.job.attempt >= this.job.maxAttempts) {
       await this.completer.jobSetStateIfRunning(this.stats, {
         id: this.job.id,
+        finalizedAtDoUpdate: true,
         finalizedAt: DateTime.utc().toJSDate(),
+        errorDoUpdate: true,
         error: attemptError,
         state: 'cancelled',
       });

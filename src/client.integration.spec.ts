@@ -84,7 +84,7 @@ describe('client integration tests', () => {
       tags: ['test'],
     });
 
-    await sleep(10_000);
+    await sleep(5_000);
 
     const fetchedJob = await pidgin.getJob(createdJob.id);
 
@@ -209,7 +209,7 @@ describe('client integration tests', () => {
     expect(executedJob).not.toBeNull();
     expect(executedJob.attempt).toBe(3);
     expect(executedJob.state).toBe('cancelled');
-    expect(executedJob.finalizedAt).toBeNull();
+    expect(executedJob.finalizedAt).toBeTruthy();
     expect(executedJob.attemptedAt).not.toBeNull();
     expect(executedJob.errors).not.toBeNull();
   });

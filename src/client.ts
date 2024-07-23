@@ -289,12 +289,14 @@ export class Client {
     if (event.isLeader) {
       this.jobRescuer.start();
       this.jobCleaner.start();
+      this.jobScheduler.start();
       this.producersByName.forEach((value) => {
         value.start();
       });
     } else {
       this.jobRescuer.stop();
       this.jobCleaner.stop();
+      this.jobScheduler.stop();
       await this.stopProducers();
     }
   }

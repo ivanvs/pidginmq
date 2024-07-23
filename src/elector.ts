@@ -80,7 +80,7 @@ export class Elector {
   }
 
   private async intervalHandler() {
-    if (this.isLeader) {
+    if (!this.isLeader) {
       return await this.gainLeadership();
     } else {
       return await this.keepLeadership();
@@ -111,8 +111,10 @@ export class Elector {
 
   async gainLeadership() {
     try {
+      logger.debug(`Requesting leadership`);
       const elected = await this.attemptElectOrReelect(false);
       if (elected) {
+        logger.debug('Leadership gained');
         this.isLeader = true;
         this.leadershipSubject?.next({ isLeader: true, time: DateTime.utc() });
       }
@@ -126,6 +128,7 @@ export class Elector {
 
   async keepLeadership() {
     try {
+      logger.trace('Requesting to keep leadership');
       const reelected = await this.attemptElectOrReelect(true);
 
       if (!reelected) {

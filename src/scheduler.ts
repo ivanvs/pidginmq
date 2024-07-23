@@ -61,6 +61,8 @@ export class Scheduler {
       now: DateTime.utc().toJSDate(),
     });
 
-    logger.info(`Scheduled number of jobs: ${numberOfScheduled}`);
+    logger.trace(
+      `Scheduled number of jobs: ${JSON.stringify(numberOfScheduled)}`,
+    );
   }
 }
