@@ -9,7 +9,7 @@ import {
 } from './client';
 import { Executor, InsertJobParams } from './executor';
 
-const nextRunTimeGenerator = (cron: CronExpression) => {
+const nextRunTimeGenerator = (cron: CronExpression): DateTime | undefined => {
   if (cron.hasNext()) {
     return DateTime.fromJSDate(cron.next().toDate());
   }

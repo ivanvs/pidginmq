@@ -150,4 +150,90 @@ describe('executor', () => {
     expect(cancelledJob.tags[0]).toBe('test');
     expect(cancelledJob.id).toBe(job.id);
   });
+
+  it('should be able to create a queue', async () => {
+    const params = {
+      metadata: '{}',
+      name: 'test',
+    };
+
+    const queue = await executor.queueCreateOrSetUpdateAt(params);
+
+    expect(queue).toBeTruthy();
+    expect(queue.name).toBe('test');
+    expect(queue.metadata).toStrictEqual({});
+    expect(queue.pausedAt).not.toBeTruthy();
+    expect(queue.updatedAt).toBeTruthy();
+  });
+
+  it("should not be able get queue that doesn't exists", async () => {
+    const queue = await executor.queueGet('queue');
+
+    expect(queue).toBeNull();
+  });
+
+  it('should be able get queue exist in database', async () => {
+    const params = {
+      metadata: '{}',
+      name: 'test',
+    };
+
+    await executor.queueCreateOrSetUpdateAt(params);
+
+    const queue = await executor.queueGet('test');
+
+    expect(queue).toBeTruthy();
+    expect(queue.metadata).toStrictEqual({});
+    expect(queue.pausedAt).not.toBeTruthy();
+    expect(queue.updatedAt).toBeTruthy();
+  });
+
+  it('should not be able to pause non existing queue', async () => {
+    const queue = await executor.queuePause('queue');
+
+    expect(queue).toBeNull();
+  });
+
+  it('should be able to pause queue', async () => {
+    const params = {
+      metadata: '{}',
+      name: 'test',
+    };
+
+    const createdQueue = await executor.queueCreateOrSetUpdateAt(params);
+
+    expect(createdQueue).toBeTruthy();
+
+    const queue = await executor.queuePause('test');
+
+    expect(queue).toBeTruthy();
+    expect(queue.pausedAt).toBeTruthy();
+  });
+
+  it('should be able to resume paused queue', async () => {
+    const params = {
+      metadata: '{}',
+      name: 'test',
+    };
+
+    const createdQueue = await executor.queueCreateOrSetUpdateAt(params);
+
+    expect(createdQueue).toBeTruthy();
+
+    const queue = await executor.queuePause('test');
+
+    expect(queue).toBeTruthy();
+    expect(queue.pausedAt).toBeTruthy();
+
+    const resumedQueue = await executor.queueResume('test');
+
+    expect(resumedQueue).toBeTruthy();
+    expect(resumedQueue.pausedAt).toBeNull();
+  });
+
+  it('should not be able to resume non existing queue', async () => {
+    const queue = await executor.queueResume('queue');
+
+    expect(queue).toBeNull();
+  });
 });
