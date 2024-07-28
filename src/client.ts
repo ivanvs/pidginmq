@@ -400,14 +400,8 @@ export class Client {
     if (options.repeat && options.repeat.cron) {
       const expression = this.parseCron(options.repeat.cron);
       scheduledTime = expression.next().toDate();
-    } else if (options?.repeat?.every <= 0) {
-      throw new ValidationException(
-        'Repeat field every should be supplied since cron is not set',
-      );
     } else {
-      scheduledTime = DateTime.utc()
-        .plus({ seconds: options.repeat.every })
-        .toJSDate();
+      throw new ValidationException('Cron field should be supplied');
     }
 
     if (options?.repeat?.limit <= 0) {

@@ -41,7 +41,6 @@ import { Queue } from './types/queue.js';
 export interface RepetableJobParams {
   cron?: string;
   limit?: number;
-  every?: number;
 }
 
 export interface InsertRepetableJobParams extends InsertJobParams {
