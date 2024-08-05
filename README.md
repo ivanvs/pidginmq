@@ -35,6 +35,56 @@ npm install pidginmq -S
 - Configurable job timeouts
 - Direct table access for bulk loads
 
+## Database initialization
+
+PidginMQ requires specific database tables to function properly. To facilitate this, PidginMQ includes a command-line tool that executes the necessary migrations.
+
+When you install the library, the CLI tool is installed automatically
+
+CLI tool containse 3 commands:
+
+- `up` - running next migration
+- `down` - will undo last migration
+- `current` - return current migration version
+
+For all 3 commands we need to supply [database connection url](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS).
+
+### pidginmq up
+
+```bash
+pidginmq up postgresql://other@localhost/otherdb
+```
+
+Result:
+
+```bash
+PidginMQ database schema is migrated to version: 001
+```
+
+### pidginmq down
+
+```bash
+pidginmq down postgresql://other@localhost/otherdb
+```
+
+Result:
+
+```bash
+PidginMQ database schema is downgraded to version: none
+```
+
+### pidginmq current
+
+```bash
+pidginmq down postgresql://other@localhost/otherdb
+```
+
+Result:
+
+```bash
+Current database migration version: 001
+```
+
 ## Examples
 
 Initialize the schema for PidginMQ in the database by running the script 01_create_initial_schema.sql, which can be found in the migration folder.
