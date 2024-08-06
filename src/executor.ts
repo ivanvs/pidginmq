@@ -432,8 +432,13 @@ export class Executor {
   }
 
   async deleteExpiredLeader(name: string): Promise<number> {
-    const result = await this.db.execute(DELETE_EXPIRED_LEADER, name);
-    return result.rowCount;
+    try {
+      const result = await this.db.execute(DELETE_EXPIRED_LEADER, name);
+      return result.rowCount;
+    } catch (e) {
+      logger.warn(e);
+      return 0;
+    }
   }
 
   private toLeader(leader: DbLeader): Leader {

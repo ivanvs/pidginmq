@@ -4,6 +4,7 @@ import { DbNotification, NotificationTopic, Notifier } from './notifier.js';
 import { sleep } from './util/promise.js';
 import { DateTime } from 'luxon';
 import { logger } from './logger/logger.settings.js';
+import { ValidationException } from './exceptions/validation.exception.js';
 
 interface LeadershipNotification {
   name: string;
@@ -39,11 +40,35 @@ export class Elector {
     ttl: number,
     notifier: Notifier,
   ) {
+    if (!executor) {
+      throw new ValidationException('Executor is not supplied');
+    }
     this.executor = executor;
+
+    if (!id) {
+      throw new ValidationException('ID cannot be empty string');
+    }
+
     this.id = id;
+
+    if (!name) {
+      throw new ValidationException('Name cannot be empty');
+    }
     this.name = name;
+
+    if (!interval || interval < 0) {
+      throw new ValidationException('Interval cannot be less then 0');
+    }
     this.interval = interval;
+
+    if (!ttl || ttl < 0) {
+      throw new ValidationException('TTL cannot be less then 0');
+    }
     this.ttl = interval + ttl;
+
+    if (!notifier) {
+      throw new ValidationException('Notifier is not supplied');
+    }
     this.notifier = notifier;
 
     this.leadershipSubject = new Subject<LeadershipEvent>();
@@ -87,7 +112,7 @@ export class Elector {
     }
   }
 
-  private handleLeadershipMessage(notification: DbNotification) {
+  private async handleLeadershipMessage(notification: DbNotification) {
     if (notification.topic !== NotificationTopic.NotificationTopicLeadership) {
       logger.debug(
         `Notification is not TopicLeadership: ${notification.topic}`,
@@ -102,14 +127,16 @@ export class Elector {
     if (
       parsedNotification.action !== 'resigned' ||
       parsedNotification.name != this.name
-    )
+    ) {
       // We only care about resignations on because we use them to preempt the
       // election attempt backoff. And we only care about our own key name.
       return;
-    return;
+    }
+
+    await this.gainLeadership();
   }
 
-  async gainLeadership() {
+  private async gainLeadership() {
     try {
       logger.debug(`Requesting leadership`);
       const elected = await this.attemptElectOrReelect(false);
@@ -126,7 +153,7 @@ export class Elector {
     }
   }
 
-  async keepLeadership() {
+  private async keepLeadership() {
     try {
       logger.trace('Requesting to keep leadership');
       const reelected = await this.attemptElectOrReelect(true);
@@ -140,7 +167,7 @@ export class Elector {
     }
   }
 
-  async giveUpLeadership() {
+  private async giveUpLeadership() {
     for (let i = 0; i < 10; i++) {
       try {
         await this.attemptResign(i);
@@ -152,7 +179,7 @@ export class Elector {
     }
   }
 
-  async attemptResign(attempt: number) {
+  private async attemptResign(attempt: number) {
     await sleep((attempt + 1) * 1_000);
     await this.executor.reasignLeader({
       leaderID: this.id,
@@ -161,7 +188,9 @@ export class Elector {
     });
   }
 
-  async attemptElectOrReelect(alreadyElected: boolean): Promise<boolean> {
+  private async attemptElectOrReelect(
+    alreadyElected: boolean,
+  ): Promise<boolean> {
     //TODO execute this in transaction
     await this.executor.deleteExpiredLeader(this.name);
 
