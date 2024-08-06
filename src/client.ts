@@ -277,10 +277,6 @@ export class Client {
       async (event) => await this.handleLeadershipChange(event),
     );
     this.elector.run();
-
-    this.producersByName.forEach((value) => {
-      value.start();
-    });
   }
 
   private async handleLeadershipChange(event: LeadershipEvent) {

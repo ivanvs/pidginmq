@@ -57,7 +57,7 @@ describe('client integration tests', () => {
       tags: ['test'],
     });
 
-    await sleep(5_000);
+    await sleep(8_000);
 
     expect(processed).toBe(1);
   });
@@ -84,7 +84,7 @@ describe('client integration tests', () => {
       tags: ['test'],
     });
 
-    await sleep(5_000);
+    await sleep(8_000);
 
     const fetchedJob = await pidgin.getJob(createdJob.id);
 
@@ -104,6 +104,9 @@ describe('client integration tests', () => {
     pidgin = new Client(options);
     await pidgin.start();
 
+    // wait to be elected
+    await sleep(5_000);
+
     const scheduledTime = new Date();
 
     const createdJob = await pidgin.addJob({
@@ -117,7 +120,7 @@ describe('client integration tests', () => {
       tags: ['test'],
     });
 
-    await sleep(1_000);
+    await sleep(2_000);
 
     const fetchedJob = await pidgin.getJob(createdJob.id);
 
