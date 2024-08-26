@@ -136,7 +136,7 @@ await this.client.addJob({
 To setup a development environment for this library:
 
 ```bash
-git clone https://github.com/timgit/pg-boss.git
+git clone https://github.com/ivanvs/pidginmq.git
 npm install
 ```
 
