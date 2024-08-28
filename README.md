@@ -1,11 +1,15 @@
 # PidginMQ
 
+![PidginMQ](/images/pidginmq.png)
+
 PidginMQ is a job queuing and task scheduling library for Node.js and JavaScript, built on PostgreSQL.
 
 The library is heavily inspired by [River](https://riverqueue.com/)
 
 [![PostgreSQL Version](https://img.shields.io/badge/PostgreSQL-11+-blue.svg?maxAge=2592000)](http://www.postgresql.org)
 [![npm version](https://badge.fury.io/js/pidginmq.svg)](https://badge.fury.io/js/pidginmq)
+
+[Documentation](https://pidginmq.com)
 
 ## Installation
 

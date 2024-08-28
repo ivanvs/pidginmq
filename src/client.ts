@@ -463,7 +463,7 @@ export class Client {
     this.workers.addWorker(kind, handler);
   }
 
-  addQueue(queueName: string, queueConfig: QueueConfig) {
+  async addQueue(queueName: string, queueConfig: QueueConfig) {
     logger.info(`Add queue: ${queueName}, with configuration: ${queueConfig}`);
     if (queueName.length < 1 && queueName.length > 512) {
       throw new ValidationException(
@@ -476,7 +476,7 @@ export class Client {
     }
 
     const producer = this.createProducer(queueName, queueConfig.maxWorkers);
-    producer.start();
+    await producer.start();
     this.producersByName.set(queueName, producer);
   }
 
