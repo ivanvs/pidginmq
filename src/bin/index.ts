@@ -8,7 +8,7 @@ const program = new Command();
 program
   .name('pidginmq')
   .description('PidginMQ CLI tool for database migration')
-  .version('0.0.2');
+  .version('0.0.3');
 
 program
   .command('up')

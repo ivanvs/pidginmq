@@ -12,6 +12,15 @@
       "args": ["--verbose", "-i", "--no-cache"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run benchmark",
+      "program": "${workspaceFolder}/benchmark/harness.js",
+      "args": ["--verbose", "-i", "--no-cache"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
     }
   ]
 }
