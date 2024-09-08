@@ -1,6 +1,6 @@
 {
   "name": "pidginmq",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Fast and reliable background jobs in Typescript",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
