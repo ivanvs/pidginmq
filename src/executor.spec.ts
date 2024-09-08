@@ -2,11 +2,12 @@ import { Executor } from './executor';
 import { PostgresDbDriver } from './postgres/pg.db.driver';
 import { getTestContainer } from './util/test.container';
 import { NotificationTopic } from './notifier';
+import { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 
 describe('executor', () => {
   jest.setTimeout(60000);
 
-  let postgresContainer;
+  let postgresContainer: StartedPostgreSqlContainer;
   let executor: Executor;
   let driver: PostgresDbDriver;
   const TEST_PARAMS = {
@@ -23,14 +24,7 @@ describe('executor', () => {
   beforeAll(async () => {
     postgresContainer = await getTestContainer().start();
 
-    driver = new PostgresDbDriver({
-      host: postgresContainer.getHost(),
-      port: postgresContainer.getPort(),
-      database: postgresContainer.getDatabase(),
-      user: postgresContainer.getUsername(),
-      password: postgresContainer.getPassword(),
-      ssl: false,
-    });
+    driver = new PostgresDbDriver(postgresContainer.getConnectionUri());
 
     await expect(driver.open()).resolves.not.toThrow();
     executor = new Executor(driver);

@@ -1,10 +1,10 @@
-import { Client, QueueConfig } from './client';
+import { Client, ClientOptions, QueueConfig } from './client';
 import { ValidationException } from './exceptions/validation.exception';
 import { LogLevels } from './logger/logger.settings';
 import { RetryPolicies } from './retry.policy';
 import { Workers } from './worker';
 
-const DEFAULT_CLIENT_OPTIONS = {
+const DEFAULT_CLIENT_OPTIONS: ClientOptions = {
   cancelledJobRetentionPeriod: 24 * 60 * 60 * 1_000, // 24h
   completedJobRetentionPeriod: 24 * 60 * 60 * 1_000, // 24h
   discardedJobRetentionPeriod: 24 * 60 * 60 * 1_000, // 24h
@@ -15,17 +15,11 @@ const DEFAULT_CLIENT_OPTIONS = {
   rescueStuckJobsAfter: 60 * 60 * 1_000,
   retryPolicy: RetryPolicies.builtinPolicies.fixed(5_000),
   schedulerInterval: 1_000,
-  logger: LogLevels.SILENT,
+  logLevel: LogLevels.SILENT,
   workers: new Workers(),
   queues: new Map<string, QueueConfig>(),
-  dbConfig: {
-    host: 'localhost',
-    port: 5432,
-    user: 'testuser',
-    password: 'testpassword',
-    database: 'testdatabase',
-    ssl: true,
-  },
+  dbUri:
+    'postgresql://testuser:testpassword@localhost:5432/testdatabase?ssl=true',
 };
 
 describe('client', () => {

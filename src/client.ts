@@ -5,10 +5,7 @@ import {
   InsertRepetableJobParams,
   JobQueryParams,
 } from './executor.js';
-import {
-  PostgresDbDriver,
-  PostgresDbOptions,
-} from './postgres/pg.db.driver.js';
+import { PostgresDbDriver } from './postgres/pg.db.driver.js';
 import { DbDriver } from './types/db.driver.js';
 import {
   ControlAction,
@@ -39,19 +36,78 @@ export interface QueueConfig {
 }
 
 export interface ClientOptions {
-  dbConfig: PostgresDbOptions;
+  /**
+   * Database connection URI.
+   *
+   * The general form of a connection URI in PostgreSQL: postgresql://[user[:password]@][netloc][:port][,...][/dbname][?param1=value1&...]
+   *
+   * Valid examples:
+   *
+   * postgresql://localhost
+   * postgresql://localhost:5433
+   * postgresql://localhost/mydb
+   * postgresql://user@localhost
+   * postgresql://user:secret@localhost
+   * postgresql://other@localhost/otherdb?connect_timeout=10&application_name=myapp
+   * postgresql://host1:123,host2:456/somedb?application_name=myapp
+   *
+   * Detailed description of format can be found here: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING-URIS
+   */
+  dbUri: string;
+  /**
+   * How long cancelled jobs are retained before removal - default 24 hours
+   */
   cancelledJobRetentionPeriod?: number;
+  /**
+   * How long completed jobs are retained before removal - default 24 hours
+   */
   completedJobRetentionPeriod?: number;
+  /**
+   * How long discarded jobs are retained before removal - default 24 hours
+   */
   discardedJobRetentionPeriod?: number;
+  /**
+   * Minimum amount of time between two fetchs of jobs for execution. Default value is 200 miliseconds
+   */
   fetchCoolDown?: number;
+  /**
+   * Amount of time between fetching jobs for execution. Default value is 500 miliseconds
+   */
   fetchPollInterval?: number;
+  /**
+   * Unique identifier of particular PidginMQ client. If not set value will be `default`.
+   * It is used for leader election and identification who attemted to execute the job
+   */
   id?: string;
+  /**
+   * The maximum duration allowed for a job to execute. Default value is 1 minute
+   */
   jobTimeout?: number;
+  /**
+   * The maximum amount of time that job can be in running state before it is being candiadate for state stuck. Default value is 1 hour
+   */
   rescueStuckJobsAfter?: number;
+  /**
+   * Retry policy for jobs. There is two default retry policies: fixed and exponential.
+   *
+   * Additional retry policies could be implemented with method that satisfy type `ClientRetryPolicy`
+   */
   retryPolicy?: ClientRetryPolicy;
+  /**
+   * Time interval between two runs of scheduler. Scheduler will move jobs from scheduled and retryable state to available state. Default value is 1 second
+   */
   schedulerInterval?: number;
+  /**
+   * Collection of executor that will execute jobs of given kind
+   */
   workers: Workers;
+  /**
+   * Map of queue names and configuration for specific queue. Currently only configuration is number of executors of queue
+   */
   queues: Map<string, QueueConfig>;
+  /**
+   * Configuration which log should be written to console. Default is SILENT - nothing will be logged into console.
+   */
   logLevel?: LogLevelDesc;
 }
 
@@ -97,6 +153,15 @@ export interface SubscribeOptions {
   onCompleted?: SubscriptionCompletedHandler;
 }
 
+/**
+ * PidginMQ Client.
+ *
+ * This class will be used as API for exposing PidginMQ functionality.
+ *
+ * Communication with database and job processing will start only after `start` method is called.
+ *
+ * On your application shut down you should execut `stop` method.
+ */
 export class Client {
   private options: ClientOptions;
   private db: DbDriver;
@@ -190,7 +255,7 @@ export class Client {
       this.workers = this.options.workers;
     }
 
-    this.db = new PostgresDbDriver(this.options.dbConfig);
+    this.db = new PostgresDbDriver(this.options.dbUri);
     this.executor = new Executor(this.db);
 
     this.workers.addWorker(

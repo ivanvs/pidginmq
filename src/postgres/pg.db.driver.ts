@@ -2,29 +2,12 @@ import { DbDriver } from 'src/types/db.driver.js';
 import pg, { Pool, Notification, Client } from 'pg';
 import { Subject, Subscription } from 'rxjs';
 import { logger } from '../logger/logger.settings';
-
-/** Configuration for connecting to PostgreSQL */
-export interface PostgresDbOptions {
-  /** PostgreSQL IP address[s] or domain name[s] */
-  host: string;
-  /** PostgreSQL server port */
-  port: number;
-  /** Username of databse user*/
-  user: string;
-  /** Password of database user*/
-  password: string;
-  /** Database name */
-  database: string;
-  /** Is SSL enalled or not */
-  ssl: boolean;
-}
-
 export class PostgresDbDriver implements DbDriver {
   private connection: Pool;
   private eventSubject: Subject<Notification>;
   private notificationClient: Client;
 
-  constructor(private options: PostgresDbOptions) {}
+  constructor(private connectionUri: string) {}
 
   get connected(): boolean {
     return !!this.connection;
@@ -33,10 +16,12 @@ export class PostgresDbDriver implements DbDriver {
   async open() {
     if (!this.connection) {
       logger.debug('Opening new connection to databse');
-      this.connection = new Pool(this.options);
+      this.connection = new Pool({ connectionString: this.connectionUri });
       await this.execute('SELECT 1');
 
-      this.notificationClient = new Client(this.options);
+      this.notificationClient = new Client({
+        connectionString: this.connectionUri,
+      });
       await this.notificationClient.connect();
     }
 

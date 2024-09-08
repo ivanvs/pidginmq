@@ -17,14 +17,7 @@ describe('client integration tests', () => {
     options = {
       workers: new Workers(),
       queues: new Map<string, QueueConfig>(),
-      dbConfig: {
-        host: postgresContainer.getHost(),
-        port: postgresContainer.getPort(),
-        user: postgresContainer.getUsername(),
-        password: postgresContainer.getPassword(),
-        database: postgresContainer.getDatabase(),
-        ssl: false,
-      },
+      dbUri: postgresContainer.getConnectionUri(),
     };
     options.queues.set('test-queue', { maxWorkers: 1 });
   });

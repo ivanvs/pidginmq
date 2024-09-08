@@ -3,11 +3,12 @@ import { getTestContainer } from '../util/test.container.js';
 import { PostgresDbDriver } from './pg.db.driver.js';
 import { Notification } from 'pg';
 import { defer } from '../util/promise.js';
+import { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 
 describe('database', () => {
   jest.setTimeout(30000);
 
-  let postgresContainer;
+  let postgresContainer: StartedPostgreSqlContainer;
 
   beforeAll(async () => {
     postgresContainer = await getTestContainer().start();
@@ -18,25 +19,13 @@ describe('database', () => {
   });
 
   const createDatabase = () => {
-    return new PostgresDbDriver({
-      host: postgresContainer.getHost(),
-      port: postgresContainer.getPort(),
-      database: postgresContainer.getDatabase(),
-      user: postgresContainer.getUsername(),
-      password: postgresContainer.getPassword(),
-      ssl: false,
-    });
+    return new PostgresDbDriver(postgresContainer.getConnectionUri());
   };
 
   it('should fail on invalid database host', async () => {
-    const driver = new PostgresDbDriver({
-      host: 'local',
-      port: postgresContainer.getPort(),
-      database: postgresContainer.getDatabase(),
-      user: postgresContainer.getUsername(),
-      password: postgresContainer.getPassword(),
-      ssl: false,
-    });
+    const driver = new PostgresDbDriver(
+      postgresContainer.getConnectionUri().replace('localhost', 'local'),
+    );
 
     await expect(async () => await driver.open()).rejects.toThrow();
   });
