@@ -99,14 +99,7 @@ Create a client:
     const options = {
       workers: new Workers(),
       queues: new Map<string, QueueConfig>(),
-      dbConfig: {
-        host: 'localhost',
-        port: 5432,
-        user: 'pidginmq',
-        password: 'Password1',
-        database: 'pidginmq',
-        ssl: false,
-      },
+      dbUri: 'postgresql://pidginmq:Password1@localhost:5432/pidginmq',
     };
     this.client = new Client(options);
     this.client.start();
