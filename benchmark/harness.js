@@ -9,14 +9,7 @@ queues.set('task', { maxWorkers: concurrency });
 const options = {
   workers: new Workers(),
   queues,
-  dbConfig: {
-    host: 'localhost',
-    port: 5432,
-    user: 'pidginmq',
-    password: 'Password1',
-    database: 'benchmark',
-    ssl: false,
-  },
+  dbUri: 'postgresql://pidginmq:Password1@localhost:5432/benchmark',
 };
 const client = new Client(options);
 client.start().then(() => {
