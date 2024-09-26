@@ -270,8 +270,8 @@ export class Client {
       this.executor,
       this.options.id,
       'default',
-      5_000,
-      10_000,
+      30,
+      10,
       this.notifier,
     );
 
